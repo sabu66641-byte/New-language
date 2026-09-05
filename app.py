@@ -339,10 +339,14 @@ def generate_cpp(ast):
                     lines.append(f"{indent_str}{var} = {cpp_val};")
                 else:
                     if val_node['type'] == 'ArrayLiteral':
-                        if val_node['elements'] and val_node['elements'][0]['type'] == 'Literal' and val_node['elements'][0]['value'].startswith('"'):
-                            type_str = "vector<string>"
-                        else:
-                            type_str = "vector<int>"
+                        # 【★C++コンパイルエラーの修正】中身の要素を安全にチェック
+                        is_string = False
+                        if val_node['elements']:
+                            first_elem = val_node['elements'][0]
+                            if first_elem['type'] == 'Literal' and first_elem['value'].startswith('"'):
+                                is_string = True
+                        
+                        type_str = "vector<string>" if is_string else "vector<int>"
                         lines.append(f"{indent_str}{type_str} {var} = {cpp_val};")
                     elif val_node['type'] == 'Literal' and val_node['value'].startswith('"'):
                         lines.append(f"{indent_str}string {var} = {cpp_val};")
@@ -385,7 +389,6 @@ def generate_cpp(ast):
                 ret_val = to_cpp_expr(node['value']) if node['value'] else ""
                 lines.append(f"{indent_str}return {ret_val};")
             elif node['type'] == 'FunctionDef':
-                # C++17の型制限を突破するため、本格的なC++テンプレートを自動生成
                 t_params = ", ".join([f"typename T_{p}" for p in node['params']])
                 param_str = ", ".join([f"T_{p} {p}" for p in node['params']])
                 func_lines = [
