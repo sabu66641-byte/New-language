@@ -7,11 +7,11 @@ from flask import Flask, request, jsonify, render_template
 
 try:
     from discord_runtime import DiscordBot, DiscordError
-    DISCORD_AVAILABLE = True
+    PS_DISCORD_AVAILABLE = True
 except ImportError:
     DiscordBot = None
     DiscordError = Exception
-    DISCORD_AVAILABLE = False
+    PS_DISCORD_AVAILABLE = False
 
 
 app = Flask(__name__)
