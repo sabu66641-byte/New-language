@@ -31,7 +31,6 @@ def run_code():
 
     try:
         # AIにC++への翻訳を依頼
-        response = client.chat.comilla.create( # 修正
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
