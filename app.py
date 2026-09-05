@@ -1,15 +1,20 @@
 import os
 import subprocess
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
+
+# トップページにアクセスしたときに、あの青いボタンの画面（index.html）を表示する命令
+@app.route("/")
+def index():
+    return render_template("index.html")
 
 @app.route("/run", methods=["POST"])
 def run_code():
     data = request.get_json()
     user_code = data.get("code", "")
 
-    # 【基礎システム】ps "文字" を C++のコードに手動で置き換える
+    # ps "文字" を C++のコードに手動で置き換える
     if user_code.startswith('ps '):
         text = user_code.replace('ps ', '').strip()
         cpp_code = f'#include <iostream>\nint main() {{ std::cout << {text} << std::endl; return 0; }}'
@@ -17,7 +22,6 @@ def run_code():
         cpp_code = '#include <iostream>\nint main() { return 0; }'
 
     try:
-        # C++コードを保存して、Render上で爆速コンパイル＆実行
         with open("main.cpp", "w") as f:
             f.write(cpp_code)
             
