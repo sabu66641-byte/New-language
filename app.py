@@ -968,6 +968,7 @@ class PsContinueSignal(Exception):
 
 
 class PsFunction:
+
     def __init__(self, node, interpreter):
         self.node = node
         self.interpreter = interpreter
@@ -1001,6 +1002,15 @@ class PsDiscordInterpreter:
         self.tree = tree
         self.globals = {}
         self.functions = {}
+        self.output = []
+        self._if_chain_end = 0
+
+        for node in tree.get("body", []):
+            if node.get("type") == "FunctionDef":
+                self.functions[node["name"]] = PsFunction(
+                    node,
+                    self
+                )
 
     def eval_expr(self, node, env):
         if node is None:
@@ -1015,27 +1025,54 @@ class PsDiscordInterpreter:
                 raw.startswith('"')
                 and raw.endswith('"')
             ):
-                try:
-                    return bytes(
-                        raw[1:-1],
-                        "utf-8"
-                    ).decode("unicode_escape")
-                except Exception:
-                    return raw[1:-1]
+                value = raw[1:-1]
+                result = []
+                i = 0
+
+                mapping = {
+                    "n": "\n",
+                    "t": "\t",
+                    "r": "\r",
+                    '"': '"',
+                    "\\": "\\"
+                }
+
+                while i < len(value):
+                    if value[i] != "\\":
+                        result.append(value[i])
+                        i += 1
+                        continue
+
+                    i += 1
+
+                    if i >= len(value):
+                        result.append("\\")
+                        break
+
+                    esc = value[i]
+
+                    if esc in mapping:
+                        result.append(mapping[esc])
+                    else:
+                        result.append("\\" + esc)
+
+                    i += 1
+
+                return "".join(result)
 
             if "." in raw:
                 try:
                     return float(raw)
-                except Exception:
+                except ValueError:
                     return raw
 
             try:
                 return int(raw)
-            except Exception:
+            except ValueError:
                 return raw
 
         if typ == "Variable":
-            name = node.get("value")
+            name = node["value"]
 
             if name in env:
                 return env[name]
@@ -1043,420 +1080,266 @@ class PsDiscordInterpreter:
             if name in self.globals:
                 return self.globals[name]
 
-            return None
+            if name == "true":
+                return True
+
+            if name == "false":
+                return False
+
+            raise Exception(
+                f"未定義の変数: {name}"
+            )
 
         if typ == "ArrayLiteral":
             return [
-                self.eval_expr(element, env)
-                for element in node.get("elements", [])
+                self.eval_expr(x, env)
+                for x in node.get("elements", [])
             ]
 
         if typ == "IndexExpr":
-            name = node.get("name")
+            base = env.get(
+                node["name"],
+                self.globals.get(node["name"])
+            )
+
             index = self.eval_expr(
-                node.get("index"),
+                node["index"],
                 env
             )
 
-            if name in env:
-                value = env[name]
-            elif name in self.globals:
-                value = self.globals[name]
-            else:
-                return None
-
-            return value[int(index)]
+            return base[index]
 
         if typ == "UnaryExpr":
-            right = self.eval_expr(
-                node.get("right"),
+            value = self.eval_expr(
+                node["right"],
                 env
             )
 
-            if node.get("op") == "!":
-                return not bool(right)
+            if node["op"] == "!":
+                return not value
 
-            return None
+            return value
 
         if typ == "BinaryExpr":
-            op = node.get("op")
-
-            if op == "&&":
-                left = self.eval_expr(
-                    node.get("left"),
-                    env
-                )
-
-                if not bool(left):
-                    return False
-
-                return bool(
-                    self.eval_expr(
-                        node.get("right"),
-                        env
-                    )
-                )
-
-            if op == "||":
-                left = self.eval_expr(
-                    node.get("left"),
-                    env
-                )
-
-                if bool(left):
-                    return True
-
-                return bool(
-                    self.eval_expr(
-                        node.get("right"),
-                        env
-                    )
-                )
-
             left = self.eval_expr(
-                node.get("left"),
+                node["left"],
                 env
             )
 
             right = self.eval_expr(
-                node.get("right"),
+                node["right"],
                 env
             )
+
+            op = node["op"]
 
             if op == "+":
                 return left + right
-
             if op == "-":
                 return left - right
-
             if op == "*":
                 return left * right
-
             if op == "/":
                 return left / right
-
             if op == "%":
                 return left % right
-
             if op == "==":
                 return left == right
-
             if op == "!=":
                 return left != right
-
             if op == "<":
                 return left < right
-
             if op == ">":
                 return left > right
-
             if op == "<=":
                 return left <= right
-
             if op == ">=":
                 return left >= right
+            if op == "&&":
+                return bool(left and right)
+            if op == "||":
+                return bool(left or right)
 
-            return None
+            raise Exception(
+                f"未対応の演算子: {op}"
+            )
 
         if typ == "CallExpr":
-            name = node.get("name")
+            name = node["name"]
 
             args = [
                 self.eval_expr(arg, env)
                 for arg in node.get("args", [])
             ]
 
-            return self.call_builtin(
-                name,
-                args,
-                env
-            )
+            if name == "len":
+                if len(args) != 1:
+                    raise Exception(
+                        "len() は引数を1つ必要とします。"
+                    )
+                return len(args[0])
 
-        return None
+            if name == "input":
+                if args:
+                    print(str(args[0]))
+                return input()
 
-        raise Exception(
-            f"未対応の式: {typ}"
-        )
+            if name == "discord_status":
+                if _ps_discord_bot is None:
+                    return False
 
-    def call_builtin(self, name, args, env):
-        global _ps_discord_bot
-
-        if name == "len":
-            if len(args) != 1:
-                raise Exception(
-                    "len() は引数を1つ必要とします。"
-                )
-            return len(args[0])
-
-        if name == "input":
-            return input()
-
-        if name == "discord_start":
-            if not PS_DISCORD_AVAILABLE:
-                raise Exception(
-                    "discord_runtime.py が利用できません。"
-                )
-
-            if len(args) != 1 or not args[0]:
-                raise Exception(
-                    "discord_start() にはBot Tokenが必要です。"
-                )
-
-            with _ps_discord_lock:
-                # すでにBotが起動している場合は再起動せず、
-                # そのまま既存のBotを使う。
-                if _ps_discord_bot is not None:
-                    return True
-
-                bot = DiscordBot(
-                    str(args[0])
-                )
-
-                def runner():
-                    global _ps_discord_bot
-
-                    try:
-                        bot.start()
-                    except Exception as e:
-                        print(
-                            f"[ps Discord] {e}"
+                try:
+                    status = _ps_discord_bot.status()
+                    return bool(
+                        status.get(
+                            "running",
+                            False
                         )
-                    finally:
-                        with _ps_discord_lock:
-                            if _ps_discord_bot is bot:
-                                _ps_discord_bot = None
+                    )
+                except Exception:
+                    return False
 
-                _ps_discord_bot = bot
+            if name == "discord_start":
+                if not PS_DISCORD_AVAILABLE:
+                    raise Exception(
+                        "discord_runtime.py が利用できません。"
+                    )
 
-                threading.Thread(
-                    target=runner,
-                    daemon=True
-                ).start()
+                if len(args) != 1 or not args[0]:
+                    raise Exception(
+                        "discord_start() にはBot Tokenが必要です。"
+                    )
 
-            return True
+                with _ps_discord_lock:
 
-        if name == "discord_stop":
-            with _ps_discord_lock:
-                bot = _ps_discord_bot
-                _ps_discord_bot = None
+                    # すでに起動しているBotがある場合は
+                    # 新しいBotを作らず、そのBotをそのまま使う。
+                    if _ps_discord_bot is not None:
+                        return True
 
-            if bot is not None:
-                bot.stop()
-
-            return True
-
-        if name == "discord_status":
-            bot = _ps_discord_bot
-
-            if bot is None:
-                return {
-                    "running": False,
-                    "available": PS_DISCORD_AVAILABLE
-                }
-
-            return {
-                "running": True,
-                "available": True,
-                "user": getattr(
-                    bot,
-                    "user",
-                    None
-                )
-            }
-
-        if name == "discord_send":
-            if _ps_discord_bot is None:
-                raise Exception(
-                    "Discord Botが起動していません。"
-                )
-
-            if len(args) != 2:
-                raise Exception(
-                    "discord_send(channel_id, content) "
-                    "が必要です。"
-                )
-
-            return _ps_discord_bot.send_message(
-                str(args[0]),
-                str(args[1])
-            )
-
-        if name == "discord_on":
-            if len(args) != 2:
-                raise Exception(
-                    "discord_on(event, function) "
-                    "が必要です。"
-                )
-
-            event_name = str(args[0])
-            handler_name = str(args[1])
-
-            if handler_name not in self.functions:
-                raise Exception(
-                    f"関数 '{handler_name}' が存在しません。"
-                )
-
-            fn = self.functions[handler_name]
-
-            _ps_discord_handlers[
-                event_name
-            ] = fn
-
-            if (
-                _ps_discord_bot is not None
-                and hasattr(
-                    _ps_discord_bot,
-                    "on"
-                )
-            ):
-                def callback(
-                    data,
-                    _fn=fn
-                ):
-                    try:
-                        if isinstance(data, dict):
-                            _ps_discord_bot.current_event = data
-
-                        _fn.call([])
-
-                    except Exception as e:
-                        print(
-                            f"[ps Discord handler] {e}"
-                        )
-
-                _ps_discord_bot.on(
-                    event_name,
-                    callback
-                )
-
-            return True
-
-        if name == "discord_reply":
-            if _ps_discord_bot is None:
-                raise Exception(
-                    "Discord Botが起動していません。"
-                )
-
-            if len(args) != 1:
-                raise Exception(
-                    "discord_reply(content) "
-                    "が必要です。"
-                )
-
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                channel_id = event.get(
-                    "channel_id"
-                )
-
-                if channel_id:
-                    return _ps_discord_bot.send_message(
-                        str(channel_id),
+                    bot = DiscordBot(
                         str(args[0])
                     )
 
+                    def runner():
+                        global _ps_discord_bot
+
+                        try:
+                            bot.start()
+                        except Exception as e:
+                            print(
+                                f"[ps Discord] {e}"
+                            )
+                        finally:
+                            with _ps_discord_lock:
+                                if _ps_discord_bot is bot:
+                                    _ps_discord_bot = None
+
+                    _ps_discord_bot = bot
+
+                    threading.Thread(
+                        target=runner,
+                        daemon=True
+                    ).start()
+
+                return True
+
+            if name == "discord_stop":
+                global _ps_discord_bot
+
+                with _ps_discord_lock:
+                    bot = _ps_discord_bot
+                    _ps_discord_bot = None
+
+                if bot is None:
+                    return False
+
+                try:
+                    bot.stop()
+                except Exception as e:
+                    print(
+                        f"[ps Discord] stop error: {e}"
+                    )
+
+                return True
+
+            if name == "discord_send":
+                if _ps_discord_bot is None:
+                    raise Exception(
+                        "Discord Botが起動していません。"
+                    )
+
+                if len(args) != 2:
+                    raise Exception(
+                        "discord_send(channel_id, content) "
+                        "が必要です。"
+                    )
+
+                return _ps_discord_bot.send_message(
+                    str(args[0]),
+                    str(args[1])
+                )
+
+            if name == "discord_content":
+                return ""
+
+            if name == "discord_channel_id":
+                return ""
+
+            if name == "discord_message_id":
+                return ""
+
+            if name == "discord_author_id":
+                return ""
+
+            if name == "discord_guild_id":
+                return ""
+
+            if name == "discord_event":
+                return ""
+
+            if name == "discord_reply":
+                if _ps_discord_bot is None:
+                    raise Exception(
+                        "Discord Botが起動していません。"
+                    )
+
+                if len(args) != 2:
+                    raise Exception(
+                        "discord_reply(channel_id, content) "
+                        "が必要です。"
+                    )
+
+                return _ps_discord_bot.send_message(
+                    str(args[0]),
+                    str(args[1])
+                )
+
+            if name == "discord_on":
+                if len(args) < 2:
+                    raise Exception(
+                        "discord_on(event, handler) "
+                        "が必要です。"
+                    )
+
+                event_name = str(args[0])
+                handler = args[1]
+
+                _ps_discord_handlers[
+                    event_name
+                ] = handler
+
+                return True
+
+            if name in self.functions:
+                return self.functions[name].call(args)
+
             raise Exception(
-                "現在のDiscordイベントに"
-                "チャンネル情報がありません。"
+                f"未定義の関数: {name}"
             )
-
-        if name == "discord_content":
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                return event.get(
-                    "content",
-                    ""
-                )
-
-            return ""
-
-        if name == "discord_channel_id":
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                return event.get(
-                    "channel_id",
-                    ""
-                )
-
-            return ""
-
-        if name == "discord_message_id":
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                return event.get(
-                    "message_id",
-                    ""
-                )
-
-            return ""
-
-        if name == "discord_author_id":
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                return event.get(
-                    "author_id",
-                    ""
-                )
-
-            return ""
-
-        if name == "discord_guild_id":
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                return event.get(
-                    "guild_id",
-                    ""
-                )
-
-            return ""
-
-        if name == "discord_event":
-            event = getattr(
-                _ps_discord_bot,
-                "current_event",
-                None
-            )
-
-            if isinstance(event, dict):
-                return dict(event)
-
-            return {}
-
-        if name in self.functions:
-            return self.functions[name].call(args)
 
         raise Exception(
-            f"未定義の関数: {name}"
+            f"未対応の式: {typ}"
         )
 
     def execute_node(self, node, env):
@@ -1469,13 +1352,18 @@ class PsDiscordInterpreter:
             )
 
             env[node["variable"]] = value
-            self.globals[node["variable"]] = value
+
+            if env is not self.globals:
+                self.globals[node["variable"]] = value
+
             return
 
         if typ == "ArrayAssignStatement":
-            arr = env.get(
-                node["name"],
-                self.globals.get(node["name"])
+            name = node["name"]
+
+            base = env.get(
+                name,
+                self.globals.get(name)
             )
 
             index = self.eval_expr(
@@ -1488,7 +1376,7 @@ class PsDiscordInterpreter:
                 env
             )
 
-            arr[index] = value
+            base[index] = value
             return
 
         if typ == "PrintStatement":
@@ -1497,9 +1385,10 @@ class PsDiscordInterpreter:
                 env
             )
 
-            text = str(value)
-            self.output.append(text)
-            print(text)
+            self.output.append(
+                str(value)
+            )
+
             return
 
         if typ == "ExpressionStatement":
@@ -1507,7 +1396,80 @@ class PsDiscordInterpreter:
                 node["value"],
                 env
             )
+
             return
+
+        if typ == "IfStatement":
+            return
+
+        if typ == "ElifStatement":
+            return
+
+        if typ == "ElseStatement":
+            return
+
+        if typ == "WhileStatement":
+            while self.eval_expr(
+                node["condition"],
+                env
+            ):
+                try:
+                    self.execute_block(
+                        node.get("body", []),
+                        env
+                    )
+                except PsBreakSignal:
+                    break
+                except PsContinueSignal:
+                    continue
+
+            return
+
+        if typ == "ForStatement":
+            iterable = self.eval_expr(
+                node["range"],
+                env
+            )
+
+            for value in iterable:
+                env[node["variable"]] = value
+
+                try:
+                    self.execute_block(
+                        node.get("body", []),
+                        env
+                    )
+                except PsBreakSignal:
+                    break
+                except PsContinueSignal:
+                    continue
+
+            return
+
+        if typ == "BREAKStatement":
+            raise PsBreakSignal()
+
+        if typ == "CONTINUEStatement":
+            raise PsContinueSignal()
+
+        if typ == "ReturnStatement":
+            value = (
+                self.eval_expr(
+                    node["value"],
+                    env
+                )
+                if node.get("value") is not None
+                else None
+            )
+
+            raise PsReturnSignal(value)
+
+        if typ == "FunctionDef":
+            return
+
+        raise Exception(
+            f"未対応の文: {typ}"
+        )
 
         if typ == "IfStatement":
             if self.eval_expr(
@@ -1759,6 +1721,7 @@ def run_code():
 
         if contains_discord_features(ast):
             interpreter = PsDiscordInterpreter(ast)
+
             output = interpreter.run()
 
             return jsonify({
