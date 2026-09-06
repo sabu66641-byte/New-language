@@ -1001,15 +1001,6 @@ class PsDiscordInterpreter:
         self.tree = tree
         self.globals = {}
         self.functions = {}
-        self.output = []
-        self._if_chain_end = 0
-
-        for node in tree.get("body", []):
-            if node.get("type") == "FunctionDef":
-                self.functions[node["name"]] = PsFunction(
-                    node,
-                    self
-                )
 
     def eval_expr(self, node, env):
         if node is None:
@@ -1024,53 +1015,27 @@ class PsDiscordInterpreter:
                 raw.startswith('"')
                 and raw.endswith('"')
             ):
-                value = raw[1:-1]
-                result = []
-                i = 0
-                mapping = {
-                    "n": "\n",
-                    "t": "\t",
-                    "r": "\r",
-                    '"': '"',
-                    "\\": "\\"
-                }
-
-                while i < len(value):
-                    if value[i] != "\\":
-                        result.append(value[i])
-                        i += 1
-                        continue
-
-                    i += 1
-
-                    if i >= len(value):
-                        result.append("\\")
-                        break
-
-                    esc = value[i]
-
-                    if esc in mapping:
-                        result.append(mapping[esc])
-                    else:
-                        result.append("\\" + esc)
-
-                    i += 1
-
-                return "".join(result)
+                try:
+                    return bytes(
+                        raw[1:-1],
+                        "utf-8"
+                    ).decode("unicode_escape")
+                except Exception:
+                    return raw[1:-1]
 
             if "." in raw:
                 try:
                     return float(raw)
-                except ValueError:
+                except Exception:
                     return raw
 
             try:
                 return int(raw)
-            except ValueError:
+            except Exception:
                 return raw
 
         if typ == "Variable":
-            name = node["value"]
+            name = node.get("value")
 
             if name in env:
                 return env[name]
@@ -1078,114 +1043,127 @@ class PsDiscordInterpreter:
             if name in self.globals:
                 return self.globals[name]
 
-            if name == "true":
-                return True
-
-            if name == "false":
-                return False
-
-            raise Exception(
-                f"未定義の変数: {name}"
-            )
+            return None
 
         if typ == "ArrayLiteral":
             return [
-                self.eval_expr(x, env)
-                for x in node.get("elements", [])
+                self.eval_expr(element, env)
+                for element in node.get("elements", [])
             ]
 
         if typ == "IndexExpr":
-            base = env.get(
-                node["name"],
-                self.globals.get(node["name"])
-            )
-
+            name = node.get("name")
             index = self.eval_expr(
-                node["index"],
+                node.get("index"),
                 env
             )
 
-            return base[index]
+            if name in env:
+                value = env[name]
+            elif name in self.globals:
+                value = self.globals[name]
+            else:
+                return None
+
+            return value[int(index)]
 
         if typ == "UnaryExpr":
-            value = self.eval_expr(
-                node["right"],
+            right = self.eval_expr(
+                node.get("right"),
                 env
             )
 
-            if node["op"] == "!":
-                return not bool(value)
+            if node.get("op") == "!":
+                return not bool(right)
 
-            return value
+            return None
 
         if typ == "BinaryExpr":
-            op = node["op"]
-
-            left = self.eval_expr(
-                node["left"],
-                env
-            )
+            op = node.get("op")
 
             if op == "&&":
-                return (
-                    bool(left)
-                    and bool(
-                        self.eval_expr(
-                            node["right"],
-                            env
-                        )
+                left = self.eval_expr(
+                    node.get("left"),
+                    env
+                )
+
+                if not bool(left):
+                    return False
+
+                return bool(
+                    self.eval_expr(
+                        node.get("right"),
+                        env
                     )
                 )
 
             if op == "||":
-                return (
-                    bool(left)
-                    or bool(
-                        self.eval_expr(
-                            node["right"],
-                            env
-                        )
+                left = self.eval_expr(
+                    node.get("left"),
+                    env
+                )
+
+                if bool(left):
+                    return True
+
+                return bool(
+                    self.eval_expr(
+                        node.get("right"),
+                        env
                     )
                 )
 
+            left = self.eval_expr(
+                node.get("left"),
+                env
+            )
+
             right = self.eval_expr(
-                node["right"],
+                node.get("right"),
                 env
             )
 
             if op == "+":
                 return left + right
+
             if op == "-":
                 return left - right
+
             if op == "*":
                 return left * right
+
             if op == "/":
                 return left / right
+
             if op == "%":
                 return left % right
+
             if op == "==":
                 return left == right
+
             if op == "!=":
                 return left != right
+
             if op == "<":
                 return left < right
+
             if op == ">":
                 return left > right
+
             if op == "<=":
                 return left <= right
+
             if op == ">=":
                 return left >= right
 
-            raise Exception(
-                f"未対応の演算子: {op}"
-            )
+            return None
 
         if typ == "CallExpr":
-            name = node["name"]
+            name = node.get("name")
 
             args = [
-                self.eval_expr(a, env)
-                for a in node.get("args", [])
+                self.eval_expr(arg, env)
+                for arg in node.get("args", [])
             ]
 
             return self.call_builtin(
@@ -1193,6 +1171,8 @@ class PsDiscordInterpreter:
                 args,
                 env
             )
+
+        return None
 
         raise Exception(
             f"未対応の式: {typ}"
@@ -1223,10 +1203,10 @@ class PsDiscordInterpreter:
                 )
 
             with _ps_discord_lock:
+                # すでにBotが起動している場合は再起動せず、
+                # そのまま既存のBotを使う。
                 if _ps_discord_bot is not None:
-                    raise Exception(
-                        "Discord Botはすでに起動しています。"
-                    )
+                    return True
 
                 bot = DiscordBot(
                     str(args[0])
