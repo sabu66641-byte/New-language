@@ -1024,13 +1024,39 @@ class PsDiscordInterpreter:
                 raw.startswith('"')
                 and raw.endswith('"')
             ):
-                try:
-                    return bytes(
-                        raw[1:-1],
-                        "utf-8"
-                    ).decode("unicode_escape")
-                except Exception:
-                    return raw[1:-1]
+                value = raw[1:-1]
+                result = []
+                i = 0
+                mapping = {
+                    "n": "\n",
+                    "t": "\t",
+                    "r": "\r",
+                    '"': '"',
+                    "\\": "\\"
+                }
+
+                while i < len(value):
+                    if value[i] != "\\":
+                        result.append(value[i])
+                        i += 1
+                        continue
+
+                    i += 1
+
+                    if i >= len(value):
+                        result.append("\\")
+                        break
+
+                    esc = value[i]
+
+                    if esc in mapping:
+                        result.append(mapping[esc])
+                    else:
+                        result.append("\\" + esc)
+
+                    i += 1
+
+                return "".join(result)
 
             if "." in raw:
                 try:
@@ -1836,7 +1862,7 @@ def run_code():
 )
 def discord_status():
 
-    if not DISCORD_AVAILABLE:
+    if not PS_DISCORD_AVAILABLE:
         return jsonify({
             "success": False,
             "running": False,
@@ -1876,7 +1902,7 @@ def discord_status():
 )
 def discord_start():
 
-    if not DISCORD_AVAILABLE:
+    if not PS_DISCORD_AVAILABLE:
         return jsonify({
             "success": False,
             "error": (
