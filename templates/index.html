@@ -1550,6 +1550,16 @@ hello()</pre>
                     .getElementById("output");
 
 
+            // 空のコードはバックエンドへ送信せず、
+            // 現在選択されている表示言語で直接メッセージを表示する。
+            if (!code.trim()) {
+                outputBox.innerText =
+                    currentLanguage === "en"
+                        ? "Error:\nCode is empty."
+                        : "エラー:\nコードが空です。";
+                return;
+            }
+
 
             outputBox.innerText =
                 currentLanguage === "en"
@@ -1610,14 +1620,20 @@ ${data.output}</span>`;
                 } else {
 
 
+                    const backendError = data.error || "";
+
+                    // バックエンド側が日本語で返す既知のエラーも、
+                    // English表示中は英語へ統一する。
+                    const localizedError = currentLanguage === "en"
+                        ? ({
+                            "コードが空です。": "Code is empty.",
+                            "コードが空です": "Code is empty."
+                        }[backendError] || backendError || "Unknown error")
+                        : (backendError || "不明なエラー");
+
                     outputBox.innerText =
                         (currentLanguage === "en" ? "Error:\n" : "エラー:\n")
-                        +
-                        (
-                            data.error
-                            ||
-                            (currentLanguage === "en" ? "Unknown error" : "不明なエラー")
-                        );
+                        + localizedError;
 
                 }
 
