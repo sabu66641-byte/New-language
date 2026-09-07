@@ -628,6 +628,53 @@
 
         }
 
+
+        /* LANGUAGE MENU */
+        .language-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .language-arrow {
+            font-size: 13px;
+            color: #64748b;
+            transition: transform 0.2s ease;
+        }
+
+        .language-toggle.open .language-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-options {
+            display: none;
+            margin: -2px 0 8px;
+            padding-left: 12px;
+        }
+
+        .language-options.open {
+            display: block;
+        }
+
+        .language-option {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 5px;
+            text-align: left;
+            border: none;
+            border-radius: 9px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .language-option:hover,
+        .language-option.active {
+            background: #1e293b;
+            color: #38bdf8;
+        }
+
     </style>
 
 </head>
@@ -735,6 +782,24 @@
         >
             サンプルコード
         </button>
+
+        <button
+            class="menu-item language-toggle"
+            id="language-toggle"
+            onclick="toggleLanguageMenu()"
+        >
+            <span data-i18n="言語">言語</span>
+            <span class="language-arrow">⌄</span>
+        </button>
+
+        <div class="language-options" id="language-options">
+            <button class="language-option active" id="lang-ja" onclick="setLanguage('ja')">
+                日本語
+            </button>
+            <button class="language-option" id="lang-en" onclick="setLanguage('en')">
+                English
+            </button>
+        </div>
 
 
 
@@ -1018,7 +1083,7 @@ hello()</pre>
                 </h2>
 
 
-                <p>
+                <p id="about-intro">
                     psは、シンプルで書きやすい文法を目指して作られた
                     プログラミング言語です。
 
@@ -1070,7 +1135,7 @@ hello()</pre>
                 </h2>
 
 
-                <p>
+                <p id="about-goal">
                     psは、プログラムを書く際の分かりやすさと
                     シンプルな記述を重視しています。
 
@@ -1436,11 +1501,11 @@ hello()</pre>
 
                 }
 
-                button.innerText = "コピーしました";
+                button.innerText = currentLanguage === "en" ? "Copied" : "コピーしました";
 
             } catch (err) {
 
-                button.innerText = "コピー失敗";
+                button.innerText = currentLanguage === "en" ? "Copy failed" : "コピー失敗";
 
             }
 
@@ -1487,7 +1552,9 @@ hello()</pre>
 
 
             outputBox.innerText =
-                "psコードをC++へ変換・コンパイル中...";
+                currentLanguage === "en"
+                    ? "Translating ps to C++ and compiling..."
+                    : "psコードをC++へ変換・コンパイル中...";
 
 
 
@@ -1531,11 +1598,11 @@ hello()</pre>
 
 
                     outputBox.innerHTML =
-                        `<span style="color: #60a5fa;">[C++コード]
+                        `<span style="color: #60a5fa;">${currentLanguage === "en" ? "[C++ Code]" : "[C++コード]"}
 
 ${data.cpp}</span>
 
-<span style="color: #10b981;">[実行結果]
+<span style="color: #10b981;">${currentLanguage === "en" ? "[Execution Result]" : "[実行結果]"}
 
 ${data.output}</span>`;
 
@@ -1544,12 +1611,12 @@ ${data.output}</span>`;
 
 
                     outputBox.innerText =
-                        "エラー:\n"
+                        (currentLanguage === "en" ? "Error:\n" : "エラー:\n")
                         +
                         (
                             data.error
                             ||
-                            "不明なエラー"
+                            (currentLanguage === "en" ? "Unknown error" : "不明なエラー")
                         );
 
                 }
@@ -1559,12 +1626,156 @@ ${data.output}</span>`;
 
 
                 outputBox.innerText =
-                    "通信エラーが発生しました。";
+                    currentLanguage === "en"
+                    ? "A network error occurred."
+                    : "通信エラーが発生しました。";
 
             }
 
 
         }
+
+
+        /* LANGUAGE */
+
+        let currentLanguage = "ja";
+
+        const translations = {
+            "▶ 実行": "▶ Run",
+            "日本語": "日本語",
+            "psは、シンプルで書きやすい文法を目指して作られた": "ps is a programming language designed with",
+            "プログラミング言語です。": "simple, easy-to-write syntax.",
+            "psで書かれたコードはC++へ変換され、": "Code written in ps is translated into C++,",
+            "コンパイル・実行されます。": "then compiled and executed.",
+            "psは、プログラムを書く際の分かりやすさと": "ps focuses on clarity and simplicity when writing programs.",
+            "シンプルな記述を重視しています。": "",
+            "複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、": "It aims to reduce complex symbols while achieving processing speed comparable to C++,",
+            "コードの構造を直感的に分かりやすくすることを": "and to make code structure intuitive and easy to understand.",
+            "目指しています。": "",
+            "実行環境": "Playground",
+            "psについて": "About ps",
+            "文法・使い方": "Syntax & Usage",
+            "サンプルコード": "Sample Code",
+            "言語": "Language",
+            "psコードを入力して実行します。": "Write and run ps code.",
+            "【実行結果がここに表示されます】": "[Execution results will appear here]",
+            "コピーして、そのまま実行環境で試すことができます。": "Copy a sample and try it directly in the playground.",
+            "基本的な文字の出力です。": "A basic example of printing text.",
+            "変数と計算": "Variables & Calculation",
+            "変数を使って計算した結果を出力します。": "Use variables and print the result of a calculation.",
+            "条件分岐": "Conditional Branching",
+            "if / elseで条件によって処理を分けます。": "Use if / else to choose behavior based on a condition.",
+            "条件が成立している間、処理を繰り返します。": "Repeat processing while a condition is true.",
+            "指定した範囲の値を順番に取り出します。": "Iterate through values in a specified range.",
+            "関数": "Functions",
+            "処理を関数としてまとめて呼び出します。": "Group processing into a function and call it.",
+            "コピー": "Copy",
+            "試す": "Try",
+            "psとは": "What is ps?",
+            "特徴": "Features",
+            "シンプルな文法": "Simple syntax",
+            "インデントによるコード構造": "Indentation-based code structure",
+            "C++バックエンド": "C++ backend",
+            "Web上でコードを実行可能": "Run code on the web",
+            "変数・条件分岐・ループ・関数などに対応": "Supports variables, conditionals, loops, functions, and more",
+            "目的": "Goal",
+            "psの基本的な文法": "Basic ps syntax",
+            "出力": "Output",
+            "psを使用して文字や値を出力します。": "Use ps to print text or values.",
+            "変数": "Variables",
+            "変数に値を代入します。": "Assign a value to a variable.",
+            "条件によって処理を変更できます。": "Change behavior depending on a condition.",
+            "指定した範囲で処理を繰り返します。": "Repeat processing over a specified range.",
+            "rangeは複数の形式に対応しています。": "range supports multiple forms.",
+            "配列": "Arrays",
+            "複数の値をまとめて扱えます。": "Handle multiple values together.",
+            "処理を関数としてまとめることができます。": "Group processing into a function.",
+            "コメント": "Comments",
+            "コード内にメモを書くことができます。": "Write notes inside your code."
+        };
+
+        function toggleLanguageMenu() {
+            document.getElementById("language-options").classList.toggle("open");
+            document.getElementById("language-toggle").classList.toggle("open");
+        }
+
+        const originalTextNodes = new WeakMap();
+
+        function setLanguage(language) {
+            if (language === currentLanguage) {
+                closeMenu();
+                return;
+            }
+
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode(node) {
+                        const parent = node.parentElement;
+                        if (!parent) return NodeFilter.FILTER_REJECT;
+                        if (["SCRIPT", "STYLE", "PRE", "TEXTAREA"].includes(parent.tagName)) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            const nodes = [];
+            while (walker.nextNode()) nodes.push(walker.currentNode);
+
+            nodes.forEach(node => {
+                if (!originalTextNodes.has(node)) {
+                    originalTextNodes.set(node, node.nodeValue);
+                }
+
+                const original = originalTextNodes.get(node);
+                const trimmed = original.trim();
+                const prefix = original.match(/^\s*/)[0];
+                const suffix = original.match(/\s*$/)[0];
+
+                if (language === "ja") {
+                    node.nodeValue = original;
+                } else if (translations[trimmed] !== undefined) {
+                    node.nodeValue = prefix + translations[trimmed] + suffix;
+                }
+            });
+
+            document.documentElement.lang = language;
+            document.title = language === "en"
+                ? "ps - Programming Language"
+                : "ps - プログラミング言語";
+
+            // ABOUTページの長文は複数のテキストノードに分かれるため、
+            // ここで文章単位で明示的に切り替える。
+            const aboutIntro = document.getElementById("about-intro");
+            const aboutGoal = document.getElementById("about-goal");
+
+            if (aboutIntro) {
+                aboutIntro.textContent = language === "en"
+                    ? "ps is a programming language designed with simple, easy-to-write syntax.\n\nCode written in ps is translated into C++ and then compiled and executed."
+                    : "psは、シンプルで書きやすい文法を目指して作られた\nプログラミング言語です。\n\npsで書かれたコードはC++へ変換され、\nコンパイル・実行されます。";
+            }
+
+            if (aboutGoal) {
+                aboutGoal.textContent = language === "en"
+                    ? "ps focuses on clarity and simple notation when writing programs.\n\nIt aims to reduce complex symbols while achieving processing speed comparable to C++, and to make code structure intuitive and easy to understand."
+                    : "psは、プログラムを書く際の分かりやすさと\nシンプルな記述を重視しています。\n\n複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、\nコードの構造を直感的に分かりやすくすることを\n目指しています。";
+            }
+
+            document.getElementById("lang-ja").classList.toggle("active", language === "ja");
+            document.getElementById("lang-en").classList.toggle("active", language === "en");
+
+            currentLanguage = language;
+            localStorage.setItem("ps-language", language);
+            closeMenu();
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedLanguage = localStorage.getItem("ps-language");
+            if (savedLanguage === "en") setLanguage("en");
+        });
 
     </script>
 
