@@ -545,6 +545,58 @@
         }
 
 
+        /* SAMPLE CODE */
+
+        .sample-box {
+            margin-bottom: 18px;
+            padding: 18px;
+            border-radius: 14px;
+            border: 1px solid #233554;
+            background: #111827;
+        }
+
+        .sample-name {
+            margin-bottom: 8px;
+            color: #38bdf8;
+            font-weight: 700;
+            font-size: 17px;
+        }
+
+        .sample-description {
+            margin-bottom: 12px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .sample-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .sample-button {
+            flex: 1;
+            padding: 11px 12px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .sample-button:active {
+            transform: scale(0.98);
+            background: #233554;
+        }
+
+        .sample-button.primary {
+            border-color: #0284c7;
+            background: #0369a1;
+            color: white;
+        }
+
         /* MOBILE */
 
         @media (max-width: 600px) {
@@ -668,7 +720,6 @@
             psについて
         </button>
 
-
         <button
             class="menu-item"
             id="menu-syntax"
@@ -676,6 +727,22 @@
         >
             文法・使い方
         </button>
+
+        <button
+            class="menu-item"
+            id="menu-samples"
+            onclick="showPage('samples')"
+        >
+            サンプルコード
+        </button>
+
+
+
+
+
+
+
+
 
     </aside>
 
@@ -746,6 +813,185 @@
 
         </section>
 
+
+
+        <!-- SAMPLE PAGE -->
+
+        <section
+            class="page"
+            id="page-samples"
+        >
+
+            <div class="page-title">
+                サンプルコード
+            </div>
+
+
+            <div class="page-description">
+                コピーして、そのまま実行環境で試すことができます。
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    Hello, World
+                </div>
+
+                <div class="sample-description">
+                    基本的な文字の出力です。
+                </div>
+
+                <pre id="sample-hello">ps "Hello, World"</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-hello', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-hello')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    変数と計算
+                </div>
+
+                <div class="sample-description">
+                    変数を使って計算した結果を出力します。
+                </div>
+
+                <pre id="sample-calc">x = 10
+y = 20
+
+ps x + y</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-calc', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-calc')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    条件分岐
+                </div>
+
+                <div class="sample-description">
+                    if / elseで条件によって処理を分けます。
+                </div>
+
+                <pre id="sample-if">x = 10
+
+if x > 5
+    ps "large"
+else
+    ps "small"</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-if', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-if')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    while
+                </div>
+
+                <div class="sample-description">
+                    条件が成立している間、処理を繰り返します。
+                </div>
+
+                <pre id="sample-while">x = 0
+
+while x < 3
+    ps x
+    x = x + 1</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-while', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-while')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    for / range
+                </div>
+
+                <div class="sample-description">
+                    指定した範囲の値を順番に取り出します。
+                </div>
+
+                <pre id="sample-range">for i in range(5)
+    ps i</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-range', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-range')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    関数
+                </div>
+
+                <div class="sample-description">
+                    処理を関数としてまとめて呼び出します。
+                </div>
+
+                <pre id="sample-function">func hello()
+    ps "hello"
+
+hello()</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-function', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-function')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
 
 
         <!-- ABOUT PAGE -->
@@ -828,7 +1074,7 @@
                     psは、プログラムを書く際の分かりやすさと
                     シンプルな記述を重視しています。
 
-                    複雑な記号をできるだけ減らし、
+                    複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、
                     コードの構造を直感的に分かりやすくすることを
                     目指しています。
                 </p>
@@ -1153,6 +1399,74 @@ hello()</pre>
 
         }
 
+
+
+        /* SAMPLE CODE */
+
+        async function copySample(sampleId, button) {
+
+            const code =
+                document
+                    .getElementById(sampleId)
+                    .innerText;
+
+            const originalText = button.innerText;
+
+            try {
+
+                if (navigator.clipboard && window.isSecureContext) {
+
+                    await navigator.clipboard.writeText(code);
+
+                } else {
+
+                    const temp = document.createElement("textarea");
+
+                    temp.value = code;
+                    temp.style.position = "fixed";
+                    temp.style.opacity = "0";
+
+                    document.body.appendChild(temp);
+                    temp.focus();
+                    temp.select();
+
+                    document.execCommand("copy");
+
+                    document.body.removeChild(temp);
+
+                }
+
+                button.innerText = "コピーしました";
+
+            } catch (err) {
+
+                button.innerText = "コピー失敗";
+
+            }
+
+            setTimeout(() => {
+
+                button.innerText = originalText;
+
+            }, 1500);
+
+        }
+
+
+        function trySample(sampleId) {
+
+            const code =
+                document
+                    .getElementById(sampleId)
+                    .innerText;
+
+            document
+                .getElementById("code")
+                .value = code;
+
+            showPage("execute");
+
+        }
 
 
         /* RUN CODE */
