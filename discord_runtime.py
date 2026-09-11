@@ -1,6 +1,6 @@
 """
 ps_discord.py
-ps向け Discord Bot / User ランタイム（単一ファイル版）
+ps向け Discord Bot ランタイム（単一ファイル版）
 
 依存:
     pip install websockets
@@ -19,7 +19,6 @@ ps向け Discord Bot / User ランタイム（単一ファイル版）
 - Interaction イベント
 - REST の簡易 rate-limit 待機
 - sync API と async API
-- Botトークンおよびユーザートークン（Selfbot）の両対応
 """
 
 from __future__ import annotations
@@ -59,10 +58,10 @@ class DiscordError(Exception):
 
 class DiscordClient:
     """
-    ps用 Discord Bot / User クライアント。
+    ps用 Discord Bot クライアント。
 
     例:
-        bot = DiscordClient("BOT_TOKEN_OR_USER_TOKEN")
+        bot = DiscordClient("BOT_TOKEN")
 
         @bot.event("ready")
         def ready(data):
@@ -104,27 +103,13 @@ class DiscordClient:
         token: str,
         *,
         intents: Optional[int] = None,
-        user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        user_agent: str = "ps-discord-runtime/1.0",
         reconnect_delay: float = 5.0,
-        is_user: Optional[bool] = None,
     ):
         if not token or not isinstance(token, str):
             raise ValueError("Discord Bot token が必要です。")
 
-        cleaned_token = token.strip()
-        if cleaned_token.startswith("Bot "):
-            cleaned_token = cleaned_token[4:].strip()
-
-        self.token = cleaned_token
-        
-        # ユーザートークン自動判別 (明示指定がない場合)
-        if is_user is not None:
-            self.is_user = is_user
-        else:
-            # ユーザートークンはドット区切り2つ（ベース64構成）、または特定のプレフィックスを持たないケースに対応
-            parts = self.token.split(".")
-            self.is_user = len(parts) == 3 and not self.token.startswith("MTI") if len(parts) == 3 else False
-
+        self.token = token
         self.intents = (
             intents
             if intents is not None
@@ -192,9 +177,8 @@ class DiscordClient:
     # ------------------------------------------------------------------
 
     def _headers(self, *, json_body: bool = False) -> dict[str, str]:
-        auth_header = self.token if self.is_user else f"Bot {self.token}"
         headers = {
-            "Authorization": auth_header,
+            "Authorization": f"Bot {self.token}",
             "Accept": "application/json",
             "User-Agent": self.user_agent,
         }
@@ -332,8 +316,6 @@ class DiscordClient:
     def get_application(self):
         if self.application is not None:
             return self.application
-        if self.is_user:
-            return {}
         self.application = self.get("/oauth2/applications/@me")
         return self.application
 
@@ -716,48 +698,8 @@ class DiscordClient:
                 self._ws = None
 
     async def _identify(self):
-        if self.is_user:
-            identify_payload = {
-                "op": 2,
-                "d": {
-                    "token": self.token,
-                    "capabilities": 16381,
-                    "properties": {
-                        "os": "Windows",
-                        "browser": "Chrome",
-                        "device": "",
-                        "system_locale": "ja-JP",
-                        "browser_user_agent": self.user_agent,
-                        "browser_version": "120.0.0.0",
-                        "os_version": "10",
-                        "referrer": "",
-                        "referring_domain": "",
-                        "referrer_current": "",
-                        "referring_domain_current": "",
-                        "release_channel": "stable",
-                        "client_build_number": 260000,
-                        "client_event_source": None,
-                    },
-                    "presence": {
-                        "status": "online",
-                        "since": 0,
-                        "activities": [],
-                        "afk": False,
-                    },
-                    "compress": False,
-                    "client_state": {
-                        "guild_versions": {},
-                        "highest_last_message_id": "0",
-                        "read_state_version": 0,
-                        "user_guild_settings_version": -1,
-                        "user_settings_version": -1,
-                        "private_channels_version": "0",
-                        "api_code_version": 0,
-                    },
-                },
-            }
-        else:
-            identify_payload = {
+        await self._send_gateway(
+            {
                 "op": 2,
                 "d": {
                     "token": self.token,
@@ -769,8 +711,7 @@ class DiscordClient:
                     },
                 },
             }
-
-        await self._send_gateway(identify_payload)
+        )
 
     async def _resume(self):
         await self._send_gateway(
