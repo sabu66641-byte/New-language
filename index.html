@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>ps - Programming Language</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #0b0f19;
+            color: #ffffff;
+
+            font-family:
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
+            min-height: 100vh;
+        }
+
+
+        /* HEADER */
+
+        .header {
+            height: 72px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 20px;
+
+            background: #161f32;
+
+            border-bottom: 1px solid #233554;
+        }
+
+
+        .logo {
+            display: flex;
+            flex-direction: column;
+        }
+
+
+        .logo-main {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+
+        .logo-sub {
+            margin-top: 2px;
+
+            font-size: 11px;
+
+            color: #64748b;
+
+            letter-spacing: 1px;
+        }
+
+
+        /* MENU BUTTON */
+
+        .menu-button {
+            width: 46px;
+            height: 46px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: transparent;
+
+            color: white;
+
+            font-size: 28px;
+
+            cursor: pointer;
+        }
+
+
+        .menu-button:active {
+            background: #233554;
+        }
+
+
+        /* MAIN */
+
+        .container {
+            width: 100%;
+
+            max-width: 1000px;
+
+            margin: 0 auto;
+
+            padding: 20px;
+        }
+
+
+        /* PAGE */
+
+        .page {
+            display: none;
+        }
+
+
+        .page.active {
+            display: block;
+        }
+
+
+        /* PAGE TITLE */
+
+        .page-title {
+            margin-bottom: 6px;
+
+            font-size: 24px;
+
+            font-weight: 700;
+        }
+
+
+        .page-description {
+            margin-bottom: 20px;
+
+            color: #94a3b8;
+
+            font-size: 14px;
+        }
+
+
+        /* CODE */
+
+        .code-label {
+            margin-bottom: 8px;
+
+            color: #94a3b8;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            letter-spacing: 1px;
+        }
+
+
+        textarea {
+            width: 100%;
+
+            height: 45vh;
+
+            min-height: 260px;
+
+            padding: 18px;
+
+            resize: vertical;
+
+            border-radius: 14px;
+
+            border: 1px solid #334155;
+
+            background: #1e293b;
+
+            color: #e2e8f0;
+
+            font-family: monospace;
+
+            font-size: 17px;
+
+            line-height: 1.6;
+        }
+
+
+        textarea::placeholder {
+            color: #64748b;
+        }
+
+
+        textarea:focus {
+            outline: none;
+
+            border-color: #38bdf8;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(56, 189, 248, 0.08);
+        }
+
+
+        /* RUN BUTTON */
+
+        .run-button {
+            width: 100%;
+
+            margin-top: 15px;
+
+            padding: 17px;
+
+            border: none;
+
+            border-radius: 14px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0284c7,
+                    #0369a1
+                );
+
+            color: white;
+
+            font-size: 18px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+        }
+
+
+        .run-button:active {
+            transform: scale(0.98);
+        }
+
+
+        .backend-text {
+            margin-top: 9px;
+
+            text-align: center;
+
+            color: #64748b;
+
+            font-size: 11px;
+        }
+
+
+        /* OUTPUT */
+
+        .output-section {
+            margin-top: 25px;
+        }
+
+
+        .output-box {
+            min-height: 140px;
+
+            max-height: 350px;
+
+            overflow-y: auto;
+
+            padding: 18px;
+
+            border-radius: 14px;
+
+            border: 1px solid #1e293b;
+
+            background: #020617;
+
+            color: #10b981;
+
+            font-family: monospace;
+
+            font-size: 15px;
+
+            line-height: 1.6;
+
+            white-space: pre-wrap;
+        }
+
+
+        /* ABOUT */
+
+        .about-box {
+            padding: 22px;
+
+            margin-bottom: 15px;
+
+            border-radius: 14px;
+
+            border: 1px solid #233554;
+
+            background: #111827;
+        }
+
+
+        .about-box h2 {
+            margin-top: 0;
+
+            margin-bottom: 12px;
+
+            font-size: 19px;
+        }
+
+
+        .about-box p {
+            margin: 0;
+
+            color: #cbd5e1;
+
+            line-height: 1.8;
+
+            font-size: 15px;
+        }
+
+
+        .feature-list {
+            margin: 0;
+
+            padding-left: 20px;
+
+            color: #cbd5e1;
+
+            line-height: 2;
+        }
+
+
+        /* SYNTAX */
+
+        .syntax-box {
+            margin-bottom: 18px;
+
+            padding: 18px;
+
+            border-radius: 14px;
+
+            border: 1px solid #233554;
+
+            background: #111827;
+        }
+
+
+        .syntax-name {
+            margin-bottom: 10px;
+
+            color: #38bdf8;
+
+            font-weight: 700;
+
+            font-size: 17px;
+        }
+
+
+        .syntax-description {
+            margin-bottom: 12px;
+
+            color: #94a3b8;
+
+            font-size: 14px;
+        }
+
+
+        pre {
+            margin: 0;
+
+            padding: 15px;
+
+            overflow-x: auto;
+
+            border-radius: 10px;
+
+            background: #020617;
+
+            color: #e2e8f0;
+
+            font-family: monospace;
+
+            font-size: 14px;
+
+            line-height: 1.6;
+        }
+
+
+        /* OVERLAY */
+
+        .overlay {
+            position: fixed;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 100%;
+
+            background:
+                rgba(0, 0, 0, 0.55);
+
+            opacity: 0;
+
+            visibility: hidden;
+
+            transition: opacity 0.25s;
+
+            z-index: 10;
+        }
+
+
+        .overlay.show {
+            opacity: 1;
+
+            visibility: visible;
+        }
+
+
+        /* SIDE MENU */
+
+        .side-menu {
+            position: fixed;
+
+            top: 0;
+            right: 0;
+
+            width: 290px;
+
+            max-width: 85vw;
+
+            height: 100vh;
+
+            padding: 25px 18px;
+
+            background: #111827;
+
+            border-left: 1px solid #233554;
+
+            transform: translateX(100%);
+
+            transition: transform 0.25s ease;
+
+            z-index: 20;
+        }
+
+
+        .side-menu.open {
+            transform: translateX(0);
+        }
+
+
+        .menu-header {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            margin-bottom: 30px;
+        }
+
+
+        .menu-logo {
+            font-size: 25px;
+
+            font-weight: 800;
+        }
+
+
+        .close-button {
+            width: 40px;
+            height: 40px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: transparent;
+
+            color: #94a3b8;
+
+            font-size: 28px;
+
+            cursor: pointer;
+        }
+
+
+        .close-button:active {
+            background: #1e293b;
+        }
+
+
+        /* MENU ITEMS */
+
+        .menu-item {
+            width: 100%;
+
+            display: block;
+
+            padding: 16px;
+
+            margin-bottom: 7px;
+
+            text-align: left;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: transparent;
+
+            color: #e2e8f0;
+
+            font-size: 16px;
+
+            cursor: pointer;
+        }
+
+
+        .menu-item:hover {
+            background: #1e293b;
+        }
+
+
+        .menu-item:active {
+            background: #233554;
+        }
+
+
+        .menu-item.active {
+            background: #1e293b;
+
+            color: #38bdf8;
+        }
+
+
+        .menu-line {
+            height: 1px;
+
+            margin: 15px 0;
+
+            background: #233554;
+        }
+
+
+        /* SAMPLE CODE */
+
+        .sample-box {
+            margin-bottom: 18px;
+            padding: 18px;
+            border-radius: 14px;
+            border: 1px solid #233554;
+            background: #111827;
+        }
+
+        .sample-name {
+            margin-bottom: 8px;
+            color: #38bdf8;
+            font-weight: 700;
+            font-size: 17px;
+        }
+
+        .sample-description {
+            margin-bottom: 12px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .sample-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .sample-button {
+            flex: 1;
+            padding: 11px 12px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .sample-button:active {
+            transform: scale(0.98);
+            background: #233554;
+        }
+
+        .sample-button.primary {
+            border-color: #0284c7;
+            background: #0369a1;
+            color: white;
+        }
+
+        /* MOBILE */
+
+        @media (max-width: 600px) {
+
+            .container {
+                padding: 15px;
+            }
+
+
+            .header {
+                height: 68px;
+
+                padding: 0 15px;
+            }
+
+
+            textarea {
+                height: 40vh;
+
+                min-height: 230px;
+
+                font-size: 16px;
+            }
+
+
+            .page-title {
+                font-size: 21px;
+            }
+
+        }
+
+
+        /* LANGUAGE MENU */
+        .language-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .language-arrow {
+            font-size: 13px;
+            color: #64748b;
+            transition: transform 0.2s ease;
+        }
+
+        .language-toggle.open .language-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-options {
+            display: none;
+            margin: -2px 0 8px;
+            padding-left: 12px;
+        }
+
+        .language-options.open {
+            display: block;
+        }
+
+        .language-option {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 5px;
+            text-align: left;
+            border: none;
+            border-radius: 9px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .language-option:hover,
+        .language-option.active {
+            background: #1e293b;
+            color: #38bdf8;
+        }
+
+
+        /* ====================================================
+           VISUAL ENHANCEMENT LAYER
+           Existing wording and page structure are preserved.
+           ==================================================== */
+
+        body {
+            background:
+                radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.09), transparent 28%),
+                radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent 30%),
+                #0b0f19;
+        }
+
+        .header {
+            background: rgba(22, 31, 50, 0.92);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .logo-main {
+            background: linear-gradient(90deg, #ffffff, #38bdf8);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .container {
+            position: relative;
+        }
+
+        .page-title {
+            letter-spacing: -0.02em;
+        }
+
+        .page-description {
+            line-height: 1.7;
+        }
+
+        textarea {
+            background:
+                linear-gradient(rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.98));
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.025),
+                0 18px 45px rgba(0,0,0,0.18);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        textarea:focus {
+            box-shadow:
+                0 0 0 3px rgba(56, 189, 248, 0.10),
+                0 18px 45px rgba(0,0,0,0.22);
+            transform: translateY(-1px);
+        }
+
+        .run-button {
+            box-shadow: 0 10px 28px rgba(56, 189, 248, 0.16);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .run-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 34px rgba(56, 189, 248, 0.22);
+        }
+
+        .sample-box,
+        .about-box,
+        .syntax-box {
+            position: relative;
+            overflow: hidden;
+            border-color: rgba(51, 65, 85, 0.95);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .sample-box:hover,
+        .about-box:hover,
+        .syntax-box:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.34);
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.20);
+        }
+
+        .sample-box::before,
+        .about-box::before,
+        .syntax-box::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(#38bdf8, #6366f1);
+            opacity: 0.65;
+        }
+
+        .output-box {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 14px 36px rgba(0,0,0,0.14);
+        }
+
+        .backend-text {
+            letter-spacing: 0.08em;
+            opacity: 0.78;
+        }
+
+        .menu-item,
+        .language-option {
+            transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .menu-item:hover,
+        .language-option:hover {
+            transform: translateX(2px);
+        }
+
+        .symbol-reference {
+            margin-top: 22px;
+            padding: 22px;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            background: linear-gradient(145deg, rgba(30,41,59,0.94), rgba(15,23,42,0.96));
+            box-shadow: 0 16px 42px rgba(0,0,0,0.18);
+        }
+
+        .symbol-reference-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .symbol-reference-title {
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .symbol-reference-subtitle {
+            margin-top: 5px;
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .symbol-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .symbol-panel {
+            min-width: 0;
+            padding: 16px;
+            border: 1px solid #334155;
+            border-radius: 13px;
+            background: rgba(15, 23, 42, 0.72);
+        }
+
+        .symbol-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 750;
+        }
+
+        .symbol-status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .symbol-status.supported {
+            color: #86efac;
+            background: rgba(34, 197, 94, 0.10);
+            border: 1px solid rgba(34, 197, 94, 0.20);
+        }
+
+        .symbol-status.unsupported {
+            color: #fda4af;
+            background: rgba(244, 63, 94, 0.09);
+            border: 1px solid rgba(244, 63, 94, 0.18);
+        }
+
+        .symbol-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .symbol-chip {
+            padding: 7px 10px;
+            border-radius: 9px;
+            border: 1px solid #334155;
+            background: #111827;
+            color: #e2e8f0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+        }
+
+        .symbol-note {
+            margin-top: 13px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .language-option.zh-option {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        @media (max-width: 700px) {
+            .symbol-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .symbol-reference {
+                padding: 17px;
+            }
+
+            .symbol-reference-header {
+                display: block;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- HEADER -->
+
+    <header class="header">
+
+        <div class="logo">
+
+            <div class="logo-main">
+                ps
+            </div>
+
+            <div class="logo-sub">
+                PROGRAMMING LANGUAGE
+            </div>
+
+        </div>
+
+
+        <button
+            class="menu-button"
+            onclick="openMenu()"
+            aria-label="メニュー"
+        >
+            ☰
+        </button>
+
+    </header>
+
+
+
+    <!-- OVERLAY -->
+
+    <div
+        class="overlay"
+        id="overlay"
+        onclick="closeMenu()"
+    ></div>
+
+
+
+    <!-- SIDE MENU -->
+
+    <aside
+        class="side-menu"
+        id="sideMenu"
+    >
+
+        <div class="menu-header">
+
+            <div class="menu-logo">
+                ps
+            </div>
+
+
+            <button
+                class="close-button"
+                onclick="closeMenu()"
+                aria-label="閉じる"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <button
+            class="menu-item active"
+            id="menu-execute"
+            onclick="showPage('execute')"
+        >
+            実行環境
+        </button>
+
+
+        <div class="menu-line"></div>
+
+
+        <button
+            class="menu-item"
+            id="menu-about"
+            onclick="showPage('about')"
+        >
+            psについて
+        </button>
+
+        <button
+            class="menu-item"
+            id="menu-syntax"
+            onclick="showPage('syntax')"
+        >
+            文法・使い方
+        </button>
+
+        <button
+            class="menu-item"
+            id="menu-samples"
+            onclick="showPage('samples')"
+        >
+            サンプルコード
+        </button>
+
+        <button
+            class="menu-item language-toggle"
+            id="language-toggle"
+            onclick="toggleLanguageMenu()"
+        >
+            <span data-i18n="言語">言語</span>
+            <span class="language-arrow">⌄</span>
+        </button>
+
+        <div class="language-options" id="language-options">
+            <button class="language-option active" id="lang-ja" onclick="setLanguage('ja')">
+                日本語
+            </button>
+            <button class="language-option" id="lang-en" onclick="setLanguage('en')">
+                English
+            </button>
+            <button class="language-option zh-option" id="lang-zh" onclick="setLanguage('zh')">
+                中文
+            </button>
+        </div>
+
+
+
+
+
+
+
+
+
+    </aside>
+
+
+
+    <!-- MAIN -->
+
+    <main class="container">
+
+
+        <!-- EXECUTE PAGE -->
+
+        <section
+            class="page active"
+            id="page-execute"
+        >
+
+            <div class="page-title">
+                実行環境
+            </div>
+
+
+            <div class="page-description">
+                psコードを入力して実行します。
+            </div>
+
+
+            <div class="code-label">
+                PS CODE
+            </div>
+
+
+            <textarea
+                id="code"
+                placeholder='ps "Hello, World"'
+                autofocus
+            ></textarea>
+
+
+            <button
+                class="run-button"
+                onclick="runCode()"
+            >
+                ▶ 実行
+            </button>
+
+
+            <div class="backend-text">
+                C++ Backend · Compile & Execute
+            </div>
+
+
+            <div class="output-section">
+
+                <div class="code-label">
+                    OUTPUT
+                </div>
+
+
+                <div
+                    class="output-box"
+                    id="output"
+                >
+【実行結果がここに表示されます】
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- SAMPLE PAGE -->
+
+        <section
+            class="page"
+            id="page-samples"
+        >
+
+            <div class="page-title">
+                サンプルコード
+            </div>
+
+
+            <div class="page-description">
+                コピーして、そのまま実行環境で試すことができます。
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    Hello, World
+                </div>
+
+                <div class="sample-description">
+                    基本的な文字の出力です。
+                </div>
+
+                <pre id="sample-hello">ps "Hello, World"</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-hello', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-hello')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    変数と計算
+                </div>
+
+                <div class="sample-description">
+                    変数を使って計算した結果を出力します。
+                </div>
+
+                <pre id="sample-calc">x = 10
+y = 20
+
+ps x + y</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-calc', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-calc')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    条件分岐
+                </div>
+
+                <div class="sample-description">
+                    if / elseで条件によって処理を分けます。
+                </div>
+
+                <pre id="sample-if">x = 10
+
+if x > 5
+    ps "large"
+else
+    ps "small"</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-if', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-if')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    while
+                </div>
+
+                <div class="sample-description">
+                    条件が成立している間、処理を繰り返します。
+                </div>
+
+                <pre id="sample-while">x = 0
+
+while x < 3
+    ps x
+    x = x + 1</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-while', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-while')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    for / range
+                </div>
+
+                <div class="sample-description">
+                    指定した範囲の値を順番に取り出します。
+                </div>
+
+                <pre id="sample-range">for i in range(5)
+    ps i</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-range', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-range')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+
+            <div class="sample-box">
+
+                <div class="sample-name">
+                    関数
+                </div>
+
+                <div class="sample-description">
+                    処理を関数としてまとめて呼び出します。
+                </div>
+
+                <pre id="sample-function">func hello()
+    ps "hello"
+
+hello()</pre>
+
+                <div class="sample-actions">
+                    <button class="sample-button" onclick="copySample('sample-function', this)">
+                        コピー
+                    </button>
+                    <button class="sample-button primary" onclick="trySample('sample-function')">
+                        試す
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ABOUT PAGE -->
+
+        <section
+            class="page"
+            id="page-about"
+        >
+
+            <div class="page-title">
+                psについて
+            </div>
+
+
+            <div class="page-description">
+                ps Programming Language
+            </div>
+
+
+            <div class="about-box">
+
+                <h2>
+                    psとは
+                </h2>
+
+
+                <p id="about-intro">
+                    psは、シンプルで書きやすい文法を目指して作られた
+                    プログラミング言語です。
+
+                    psで書かれたコードはC++へ変換され、
+                    コンパイル・実行されます。
+                </p>
+
+            </div>
+
+
+            <div class="about-box">
+
+                <h2>
+                    特徴
+                </h2>
+
+
+                <ul class="feature-list">
+
+                    <li>
+                        シンプルな文法
+                    </li>
+
+                    <li>
+                        インデントによるコード構造
+                    </li>
+
+                    <li>
+                        C++バックエンド
+                    </li>
+
+                    <li>
+                        Web上でコードを実行可能
+                    </li>
+
+                    <li>
+                        変数・条件分岐・ループ・関数などに対応
+                    </li>
+
+                </ul>
+
+            </div>
+
+
+            <div class="about-box">
+
+                <h2>
+                    目的
+                </h2>
+
+
+                <p id="about-goal">
+                    psは、プログラムを書く際の分かりやすさと
+                    シンプルな記述を重視しています。
+
+                    複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、
+                    コードの構造を直感的に分かりやすくすることを
+                    目指しています。
+                </p>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- SYNTAX PAGE -->
+
+        <section
+            class="page"
+            id="page-syntax"
+        >
+
+            <div class="page-title">
+                文法・使い方
+            </div>
+
+
+            <div class="page-description">
+                psの基本的な文法
+            </div>
+
+
+            <!-- OUTPUT -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    出力
+                </div>
+
+
+                <div class="syntax-description">
+                    psを使用して文字や値を出力します。
+                </div>
+
+
+                <pre>ps "Hello, World"</pre>
+
+            </div>
+
+
+
+            <!-- VARIABLE -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    変数
+                </div>
+
+
+                <div class="syntax-description">
+                    変数に値を代入します。
+                </div>
+
+
+                <pre>x = 10
+
+ps x</pre>
+
+            </div>
+
+
+
+            <!-- IF -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    条件分岐
+                </div>
+
+
+                <div class="syntax-description">
+                    条件によって処理を変更できます。
+                </div>
+
+
+                <pre>if x > 5
+    ps "large"
+
+else
+    ps "small"</pre>
+
+            </div>
+
+
+
+            <!-- WHILE -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    while
+                </div>
+
+
+                <div class="syntax-description">
+                    条件が成立している間、処理を繰り返します。
+                </div>
+
+
+                <pre>x = 0
+
+while x < 3
+    ps x
+    x = x + 1</pre>
+
+            </div>
+
+
+
+            <!-- FOR -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    for / range
+                </div>
+
+
+                <div class="syntax-description">
+                    指定した範囲で処理を繰り返します。
+                </div>
+
+
+                <pre>for i in range(5)
+    ps i</pre>
+
+            </div>
+
+
+
+            <!-- RANGE -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    range
+                </div>
+
+
+                <div class="syntax-description">
+                    rangeは複数の形式に対応しています。
+                </div>
+
+
+                <pre>range(5)
+
+range(2, 6)
+
+range(5, 0, -2)</pre>
+
+            </div>
+
+
+
+            <!-- ARRAY -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    配列
+                </div>
+
+
+                <div class="syntax-description">
+                    複数の値をまとめて扱えます。
+                </div>
+
+
+                <pre>numbers = [10, 20, 30]</pre>
+
+            </div>
+
+
+
+            <!-- FUNCTION -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    関数
+                </div>
+
+
+                <div class="syntax-description">
+                    処理を関数としてまとめることができます。
+                </div>
+
+
+                <pre>func hello()
+    ps "hello"
+
+hello()</pre>
+
+            </div>
+
+
+
+            <!-- COMMENT -->
+
+            <div class="syntax-box">
+
+                <div class="syntax-name">
+                    コメント
+                </div>
+
+
+                <div class="syntax-description">
+                    コード内にメモを書くことができます。
+                </div>
+
+
+                <pre># comment</pre>
+
+            </div>
+
+
+
+        <!-- SYMBOL REFERENCE ADDITION -->
+
+        <section class="symbol-reference" id="symbol-reference">
+
+            <div class="symbol-reference-header">
+                <div>
+                    <div class="symbol-reference-title">対応・未対応の記号</div>
+                    <div class="symbol-reference-subtitle">現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。</div>
+                </div>
+            </div>
+
+            <div class="symbol-grid">
+
+                <div class="symbol-panel">
+                    <div class="symbol-panel-title">
+                        対応
+                        <span class="symbol-status supported">SUPPORTED</span>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-chip">=</li>
+                        <li class="symbol-chip">+</li>
+                        <li class="symbol-chip">-</li>
+                        <li class="symbol-chip">*</li>
+                        <li class="symbol-chip">/</li>
+                        <li class="symbol-chip">%</li>
+                        <li class="symbol-chip">==</li>
+                        <li class="symbol-chip">!=</li>
+                        <li class="symbol-chip">&lt;</li>
+                        <li class="symbol-chip">&gt;</li>
+                        <li class="symbol-chip">&lt;=</li>
+                        <li class="symbol-chip">&gt;=</li>
+                        <li class="symbol-chip">!</li>
+                        <li class="symbol-chip">++</li>
+                        <li class="symbol-chip">--</li>
+                        <li class="symbol-chip">**</li>
+                        <li class="symbol-chip">&amp;</li>
+                        <li class="symbol-chip">|</li>
+                        <li class="symbol-chip">^</li>
+                        <li class="symbol-chip">~</li>
+                        <li class="symbol-chip">&lt;&lt;</li>
+                        <li class="symbol-chip">&gt;&gt;</li>
+                        <li class="symbol-chip">+=</li>
+                        <li class="symbol-chip">-=</li>
+                        <li class="symbol-chip">*=</li>
+                        <li class="symbol-chip">/=</li>
+                        <li class="symbol-chip">%=</li>
+                        <li class="symbol-chip">&amp;=</li>
+                        <li class="symbol-chip">|=</li>
+                        <li class="symbol-chip">^=</li>
+                        <li class="symbol-chip">&lt;&lt;=</li>
+                        <li class="symbol-chip">&gt;&gt;=</li>
+                    </ul>
+                    <div class="symbol-note">論理演算には <code>and</code> / <code>or</code> / <code>not</code> も使用できます。</div>
+                </div>
+
+                <div class="symbol-panel">
+                    <div class="symbol-panel-title">
+                        現在未対応
+                        <span class="symbol-status unsupported">NOT SUPPORTED</span>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-chip">:</li>
+                        <li class="symbol-chip">;</li>
+                        <li class="symbol-chip">{ }</li>
+                        <li class="symbol-chip">?</li>
+                        <li class="symbol-chip">//</li>
+                        <li class="symbol-chip">&amp;&amp;</li>
+                        <li class="symbol-chip">||</li>
+                        <li class="symbol-chip">&gt;&gt;&gt;</li>
+                        <li class="symbol-chip">**=</li>
+                    </ul>
+                    <div class="symbol-note">これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。</div>
+                </div>
+
+            </div>
+
+        </section>
+        </section>
+
+    </main>
+
+
+
+    <script>
+
+
+        /* MENU */
+
+        function openMenu() {
+
+            document
+                .getElementById("sideMenu")
+                .classList
+                .add("open");
+
+
+            document
+                .getElementById("overlay")
+                .classList
+                .add("show");
+
+        }
+
+
+
+        function closeMenu() {
+
+            document
+                .getElementById("sideMenu")
+                .classList
+                .remove("open");
+
+
+            document
+                .getElementById("overlay")
+                .classList
+                .remove("show");
+
+        }
+
+
+
+        /* PAGE SWITCH */
+
+        function showPage(pageName) {
+
+
+            const pages =
+                document.querySelectorAll(".page");
+
+
+            pages.forEach(page => {
+
+                page.classList.remove("active");
+
+            });
+
+
+
+            document
+                .getElementById(
+                    "page-" + pageName
+                )
+                .classList
+                .add("active");
+
+
+
+            const menuItems =
+                document.querySelectorAll(
+                    ".menu-item"
+                );
+
+
+            menuItems.forEach(item => {
+
+                item.classList.remove("active");
+
+            });
+
+
+
+            document
+                .getElementById(
+                    "menu-" + pageName
+                )
+                .classList
+                .add("active");
+
+
+
+            closeMenu();
+
+
+            window.scrollTo(0, 0);
+
+        }
+
+
+
+        /* SAMPLE CODE */
+
+        async function copySample(sampleId, button) {
+
+            const code =
+                document
+                    .getElementById(sampleId)
+                    .innerText;
+
+            const originalText = button.innerText;
+
+            try {
+
+                if (navigator.clipboard && window.isSecureContext) {
+
+                    await navigator.clipboard.writeText(code);
+
+                } else {
+
+                    const temp = document.createElement("textarea");
+
+                    temp.value = code;
+                    temp.style.position = "fixed";
+                    temp.style.opacity = "0";
+
+                    document.body.appendChild(temp);
+                    temp.focus();
+                    temp.select();
+
+                    document.execCommand("copy");
+
+                    document.body.removeChild(temp);
+
+                }
+
+                button.innerText = currentLanguage === "en" ? "Copied" : currentLanguage === "zh" ? "已复制" : "コピーしました";
+
+            } catch (err) {
+
+                button.innerText = currentLanguage === "en" ? "Copy failed" : currentLanguage === "zh" ? "复制失败" : "コピー失敗";
+
+            }
+
+            setTimeout(() => {
+
+                button.innerText = originalText;
+
+            }, 1500);
+
+        }
+
+
+        function trySample(sampleId) {
+
+            const code =
+                document
+                    .getElementById(sampleId)
+                    .innerText;
+
+            document
+                .getElementById("code")
+                .value = code;
+
+            showPage("execute");
+
+        }
+
+
+        /* RUN CODE */
+
+        async function runCode() {
+
+
+            const code =
+                document
+                    .getElementById("code")
+                    .value;
+
+
+            const outputBox =
+                document
+                    .getElementById("output");
+
+
+            // 空のコードはバックエンドへ送信せず、
+            // 現在選択されている表示言語で直接メッセージを表示する。
+            if (!code.trim()) {
+                outputBox.innerText =
+                    currentLanguage === "en"
+                        ? "Error:\nCode is empty."
+                        : currentLanguage === "zh"
+                        ? "错误：\n代码为空。"
+                        : "エラー:\nコードが空です。";
+                return;
+            }
+
+
+            outputBox.innerText =
+                currentLanguage === "en"
+                    ? "Translating ps to C++ and compiling..."
+                    : currentLanguage === "zh"
+                    ? "正在将 ps 转换为 C++ 并编译……"
+                    : "psコードをC++へ変換・コンパイル中...";
+
+
+
+            try {
+
+
+                const response =
+                    await fetch(
+                        "/run",
+                        {
+
+                            method: "POST",
+
+
+                            headers: {
+
+                                "Content-Type":
+                                    "application/json"
+
+                            },
+
+
+                            body:
+                                JSON.stringify({
+
+                                    code: code
+
+                                })
+
+                        }
+                    );
+
+
+
+                const data =
+                    await response.json();
+
+
+
+                if (data.success) {
+
+
+                    outputBox.innerHTML =
+                        `<span style="color: #60a5fa;">${currentLanguage === "en" ? "[C++ Code]" : currentLanguage === "zh" ? "[C++代码]" : "[C++コード]"}
+
+${data.cpp}</span>
+
+<span style="color: #10b981;">${currentLanguage === "en" ? "[Execution Result]" : currentLanguage === "zh" ? "[执行结果]" : "[実行結果]"}
+
+${data.output}</span>`;
+
+
+                } else {
+
+
+                    const backendError = data.error || "";
+
+                    // バックエンド側が日本語で返す既知のエラーも、
+                    // English表示中は英語へ統一する。
+                    const localizedError = currentLanguage === "en"
+                        ? ({
+                            "コードが空です。": "Code is empty.",
+                            "コードが空です": "Code is empty."
+                        }[backendError] || backendError || "Unknown error")
+                        : currentLanguage === "zh"
+                        ? ({
+                            "コードが空です。": "代码为空。",
+                            "コードが空です": "代码为空。"
+                        }[backendError] || backendError || "未知错误")
+                        : (backendError || "不明なエラー");
+
+                    outputBox.innerText =
+                        (currentLanguage === "en" ? "Error:\n" : currentLanguage === "zh" ? "错误：\n" : "エラー:\n")
+                        + localizedError;
+
+                }
+
+
+            } catch (err) {
+
+
+                outputBox.innerText =
+                    currentLanguage === "en"
+                    ? "A network error occurred."
+                    : currentLanguage === "zh"
+                    ? "发生网络错误。"
+                    : "通信エラーが発生しました。";
+
+            }
+
+
+        }
+
+
+        /* LANGUAGE */
+
+        let currentLanguage = "ja";
+
+        const translations = {
+            "▶ 実行": "▶ Run",
+            "日本語": "日本語",
+            "psは、シンプルで書きやすい文法を目指して作られた": "ps is a programming language designed with",
+            "プログラミング言語です。": "simple, easy-to-write syntax.",
+            "psで書かれたコードはC++へ変換され、": "Code written in ps is translated into C++,",
+            "コンパイル・実行されます。": "then compiled and executed.",
+            "psは、プログラムを書く際の分かりやすさと": "ps focuses on clarity and simplicity when writing programs.",
+            "シンプルな記述を重視しています。": "",
+            "複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、": "It aims to reduce complex symbols while achieving processing speed comparable to C++,",
+            "コードの構造を直感的に分かりやすくすることを": "and to make code structure intuitive and easy to understand.",
+            "目指しています。": "",
+            "実行環境": "Playground",
+            "psについて": "About ps",
+            "文法・使い方": "Syntax & Usage",
+            "サンプルコード": "Sample Code",
+            "言語": "Language",
+            "psコードを入力して実行します。": "Write and run ps code.",
+            "【実行結果がここに表示されます】": "[Execution results will appear here]",
+            "コピーして、そのまま実行環境で試すことができます。": "Copy a sample and try it directly in the playground.",
+            "基本的な文字の出力です。": "A basic example of printing text.",
+            "変数と計算": "Variables & Calculation",
+            "変数を使って計算した結果を出力します。": "Use variables and print the result of a calculation.",
+            "条件分岐": "Conditional Branching",
+            "if / elseで条件によって処理を分けます。": "Use if / else to choose behavior based on a condition.",
+            "条件が成立している間、処理を繰り返します。": "Repeat processing while a condition is true.",
+            "指定した範囲の値を順番に取り出します。": "Iterate through values in a specified range.",
+            "関数": "Functions",
+            "処理を関数としてまとめて呼び出します。": "Group processing into a function and call it.",
+            "コピー": "Copy",
+            "試す": "Try",
+            "psとは": "What is ps?",
+            "特徴": "Features",
+            "シンプルな文法": "Simple syntax",
+            "インデントによるコード構造": "Indentation-based code structure",
+            "C++バックエンド": "C++ backend",
+            "Web上でコードを実行可能": "Run code on the web",
+            "変数・条件分岐・ループ・関数などに対応": "Supports variables, conditionals, loops, functions, and more",
+            "目的": "Goal",
+            "psの基本的な文法": "Basic ps syntax",
+            "出力": "Output",
+            "psを使用して文字や値を出力します。": "Use ps to print text or values.",
+            "変数": "Variables",
+            "変数に値を代入します。": "Assign a value to a variable.",
+            "条件によって処理を変更できます。": "Change behavior depending on a condition.",
+            "指定した範囲で処理を繰り返します。": "Repeat processing over a specified range.",
+            "rangeは複数の形式に対応しています。": "range supports multiple forms.",
+            "配列": "Arrays",
+            "複数の値をまとめて扱えます。": "Handle multiple values together.",
+            "処理を関数としてまとめることができます。": "Group processing into a function.",
+            "コメント": "Comments",
+            "コード内にメモを書くことができます。": "Write notes inside your code."
+        };
+
+
+        const translationsZh = {
+            "▶ 実行": "▶ 运行",
+            "日本語": "日语",
+            "psは、シンプルで書きやすい文法を目指して作られた": "ps 是一种以简洁、易写的语法为目标设计的",
+            "プログラミング言語です。": "编程语言。",
+            "psで書かれたコードはC++へ変換され、": "使用 ps 编写的代码会转换为 C++，",
+            "コンパイル・実行されます。": "然后进行编译和执行。",
+            "psは、プログラムを書く際の分かりやすさと": "ps 注重编程时的清晰性和",
+            "シンプルな記述を重視しています。": "简洁的代码表达。",
+            "複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、": "它旨在尽量减少复杂符号，同时实现接近 C++ 的处理速度，",
+            "コードの構造を直感的に分かりやすくすることを": "并让代码结构更加直观、易于理解。",
+            "目指しています。": "",
+            "実行環境": "运行环境",
+            "psについて": "关于 ps",
+            "文法・使い方": "语法与用法",
+            "サンプルコード": "示例代码",
+            "言語": "语言",
+            "psコードを入力して実行します。": "输入并运行 ps 代码。",
+            "【実行結果がここに表示されます】": "【执行结果将显示在这里】",
+            "コピーして、そのまま実行環境で試すことができます。": "复制后即可直接在运行环境中尝试。",
+            "基本的な文字の出力です。": "这是一个基本的文本输出示例。",
+            "変数と計算": "变量与计算",
+            "変数を使って計算した結果を出力します。": "使用变量进行计算并输出结果。",
+            "条件分岐": "条件分支",
+            "if / elseで条件によって処理を分けます。": "使用 if / else 根据条件选择处理方式。",
+            "条件が成立している間、処理を繰り返します。": "条件成立时重复执行处理。",
+            "指定した範囲の値を順番に取り出します。": "依次取得指定范围内的值。",
+            "関数": "函数",
+            "処理を関数としてまとめて呼び出します。": "将处理封装为函数并调用。",
+            "コピー": "复制",
+            "試す": "尝试",
+            "psとは": "什么是 ps？",
+            "特徴": "特点",
+            "シンプルな文法": "简洁语法",
+            "インデントによるコード構造": "基于缩进的代码结构",
+            "C++バックエンド": "C++ 后端",
+            "Web上でコードを実行可能": "可在 Web 上运行代码",
+            "変数・条件分岐・ループ・関数などに対応": "支持变量、条件分支、循环、函数等",
+            "目的": "目标",
+            "psの基本的な文法": "ps 基本语法",
+            "出力": "输出",
+            "psを使用して文字や値を出力します。": "使用 ps 输出文本或数值。",
+            "変数": "变量",
+            "変数に値を代入します。": "为变量赋值。",
+            "条件によって処理を変更できます。": "可以根据条件改变处理方式。",
+            "指定した範囲で処理を繰り返します。": "在指定范围内重复执行处理。",
+            "rangeは複数の形式に対応しています。": "range 支持多种形式。",
+            "配列": "数组",
+            "複数の値をまとめて扱えます。": "可以集中处理多个值。",
+            "処理を関数としてまとめることができます。": "可以将处理封装为函数。",
+            "コメント": "注释",
+            "コード内にメモを書くことができます。": "可以在代码中添加备注。",
+            "対応・未対応の記号": "支持与未支持的符号",
+            "現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。": "这里汇总了当前 ps 支持的主要运算符，以及目前尚未支持的主要符号。",
+            "対応": "支持",
+            "現在未対応": "目前未支持",
+            "論理演算には": "逻辑运算还可以使用",
+            "も使用できます。": "。",
+            "これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。": "这是主要未支持符号的列表。随着语言规范扩展，我们会继续更新。"
+        };
+
+        function toggleLanguageMenu() {
+            document.getElementById("language-options").classList.toggle("open");
+            document.getElementById("language-toggle").classList.toggle("open");
+        }
+
+        const originalTextNodes = new WeakMap();
+
+        function setLanguage(language) {
+            if (language === currentLanguage) {
+                closeMenu();
+                return;
+            }
+
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode(node) {
+                        const parent = node.parentElement;
+                        if (!parent) return NodeFilter.FILTER_REJECT;
+                        if (["SCRIPT", "STYLE", "PRE", "TEXTAREA"].includes(parent.tagName)) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            const nodes = [];
+            while (walker.nextNode()) nodes.push(walker.currentNode);
+
+            nodes.forEach(node => {
+                if (!originalTextNodes.has(node)) {
+                    originalTextNodes.set(node, node.nodeValue);
+                }
+
+                const original = originalTextNodes.get(node);
+                const trimmed = original.trim();
+                const prefix = original.match(/^\s*/)[0];
+                const suffix = original.match(/\s*$/)[0];
+
+                if (language === "ja") {
+                    node.nodeValue = original;
+                } else if (language === "en" && translations[trimmed] !== undefined) {
+                    node.nodeValue = prefix + translations[trimmed] + suffix;
+                } else if (language === "zh" && translationsZh[trimmed] !== undefined) {
+                    node.nodeValue = prefix + translationsZh[trimmed] + suffix;
+                }
+            });
+
+            document.documentElement.lang = language;
+            document.title = language === "en"
+                ? "ps - Programming Language"
+                : language === "zh"
+                ? "ps - 编程语言"
+                : "ps - プログラミング言語";
+
+            // ABOUTページの長文は複数のテキストノードに分かれるため、
+            // ここで文章単位で明示的に切り替える。
+            const aboutIntro = document.getElementById("about-intro");
+            const aboutGoal = document.getElementById("about-goal");
+
+            if (aboutIntro) {
+                aboutIntro.textContent = language === "en"
+                    ? "ps is a programming language designed with simple, easy-to-write syntax.\n\nCode written in ps is translated into C++ and then compiled and executed."
+                    : language === "zh"
+                    ? "ps 是一种以简洁、易写的语法为目标设计的编程语言。\n\n使用 ps 编写的代码会转换为 C++，然后进行编译和执行。"
+                    : "psは、シンプルで書きやすい文法を目指して作られた\nプログラミング言語です。\n\npsで書かれたコードはC++へ変換され、\nコンパイル・実行されます。";
+            }
+
+            if (aboutGoal) {
+                aboutGoal.textContent = language === "en"
+                    ? "ps focuses on clarity and simple notation when writing programs.\n\nIt aims to reduce complex symbols while achieving processing speed comparable to C++, and to make code structure intuitive and easy to understand."
+                    : language === "zh"
+                    ? "ps 注重编程时的清晰性和简洁的代码表达。\n\n它旨在尽量减少复杂符号，同时实现接近 C++ 的处理速度，并让代码结构更加直观、易于理解。"
+                    : "psは、プログラムを書く際の分かりやすさと\nシンプルな記述を重視しています。\n\n複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、\nコードの構造を直感的に分かりやすくすることを\n目指しています。";
+            }
+
+            document.getElementById("lang-ja").classList.toggle("active", language === "ja");
+            document.getElementById("lang-en").classList.toggle("active", language === "en");
+            document.getElementById("lang-zh").classList.toggle("active", language === "zh");
+
+            currentLanguage = language;
+            localStorage.setItem("ps-language", language);
+            closeMenu();
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const savedLanguage = localStorage.getItem("ps-language");
+            if (savedLanguage === "en" || savedLanguage === "zh") setLanguage(savedLanguage);
+        });
+
+    </script>
+
+
+</body>
+
+</html>
