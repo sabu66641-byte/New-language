@@ -55,7 +55,7 @@ def tokenize(source_code):
         ("KEYWORDS", r"\b(if|elif|else|while|for|in|break|continue|func|return)\b"),
         ("LOGIC", r"\b(and|or|not)\b"),
         ("ID", r"[a-zA-Z_]\w*"),
-        ("OP", r"==|!=|<=|>=|[-+*/%=<>]"),
+        ("OP", r"\*\*|\+\+|--|\+=|-=|\*=|/=|%=|<<|>>|&=|\|=|\^=|==|!=|<=|>=|[+\-*/%=<>!&|^~]"),
         ("LPAREN", r"\("),
         ("RPAREN", r"\)"),
         ("LBRACK", r"\["),
@@ -123,238 +123,177 @@ def tokenize(source_code):
 # ====================================================
 
 class ExpressionParser:
+    """Recursive-descent expression parser with explicit precedence."""
 
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
 
     def peek(self):
-        if (
-            self.pos < len(self.tokens)
-            and self.tokens[self.pos]["type"] != "NL"
-        ):
+        if self.pos < len(self.tokens) and self.tokens[self.pos]["type"] != "NL":
             return self.tokens[self.pos]
         return None
 
-    def consume(self, expected_type=None):
+    def consume(self, expected_type=None, expected_value=None):
         tok = self.peek()
+        if tok is None:
+            return None
+        if expected_type is not None and tok["type"] != expected_type:
+            return None
+        if expected_value is not None and tok["value"] != expected_value:
+            return None
+        self.pos += 1
+        return tok
 
-        if tok and (
-            expected_type is None
-            or tok["type"] == expected_type
-        ):
-            self.pos += 1
-            return tok
+    def expect(self, expected_type=None, expected_value=None):
+        tok = self.consume(expected_type, expected_value)
+        if tok is None:
+            wanted = expected_value or expected_type or "トークン"
+            raise Exception(f"構文エラー: {wanted} が必要です。")
+        return tok
 
-        return None
+    def at_end(self):
+        return self.peek() is None
 
     def parse(self):
-        return self.parse_or()
+        node = self.parse_or()
+        if not self.at_end():
+            tok = self.peek()
+            raise Exception(f"構文エラー (行 {tok['line']}): 未対応または不正なトークン '{tok['value']}' があります。")
+        return node
 
+    # Lowest -> highest precedence.
     def parse_or(self):
         node = self.parse_and()
-
-        while (
-            self.peek()
-            and self.peek()["type"] == "LOGIC"
-            and self.peek()["value"] == "or"
-        ):
+        while self.peek() and self.peek()["type"] == "LOGIC" and self.peek()["value"] == "or":
             self.consume()
-            right = self.parse_and()
-
-            node = {
-                "type": "BinaryExpr",
-                "op": "||",
-                "left": node,
-                "right": right
-            }
-
+            node = {"type": "BinaryExpr", "op": "||", "left": node, "right": self.parse_and()}
         return node
 
     def parse_and(self):
-        node = self.parse_equality()
-
-        while (
-            self.peek()
-            and self.peek()["type"] == "LOGIC"
-            and self.peek()["value"] == "and"
-        ):
+        node = self.parse_bit_or()
+        while self.peek() and self.peek()["type"] == "LOGIC" and self.peek()["value"] == "and":
             self.consume()
-            right = self.parse_equality()
+            node = {"type": "BinaryExpr", "op": "&&", "left": node, "right": self.parse_bit_or()}
+        return node
 
-            node = {
-                "type": "BinaryExpr",
-                "op": "&&",
-                "left": node,
-                "right": right
-            }
+    def parse_bit_or(self):
+        node = self.parse_bit_xor()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] == "|":
+            self.consume()
+            node = {"type": "BinaryExpr", "op": "|", "left": node, "right": self.parse_bit_xor()}
+        return node
 
+    def parse_bit_xor(self):
+        node = self.parse_bit_and()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] == "^":
+            self.consume()
+            node = {"type": "BinaryExpr", "op": "^", "left": node, "right": self.parse_bit_and()}
+        return node
+
+    def parse_bit_and(self):
+        node = self.parse_equality()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] == "&":
+            self.consume()
+            node = {"type": "BinaryExpr", "op": "&", "left": node, "right": self.parse_equality()}
         return node
 
     def parse_equality(self):
-        node = self.parse_expr()
-
-        while (
-            self.peek()
-            and self.peek()["type"] == "OP"
-            and self.peek()["value"]
-            in ["==", "!=", "<", ">", "<=", ">="]
-        ):
+        node = self.parse_shift()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] in ["==", "!=", "<", ">", "<=", ">="]:
             op = self.consume()["value"]
-            right = self.parse_expr()
+            node = {"type": "BinaryExpr", "op": op, "left": node, "right": self.parse_shift()}
+        return node
 
-            node = {
-                "type": "BinaryExpr",
-                "op": op,
-                "left": node,
-                "right": right
-            }
-
+    def parse_shift(self):
+        node = self.parse_expr()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] in ["<<", ">>"]:
+            op = self.consume()["value"]
+            node = {"type": "BinaryExpr", "op": op, "left": node, "right": self.parse_expr()}
         return node
 
     def parse_expr(self):
         node = self.parse_term()
-
-        while (
-            self.peek()
-            and self.peek()["type"] == "OP"
-            and self.peek()["value"] in ["+", "-"]
-        ):
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] in ["+", "-"]:
             op = self.consume()["value"]
-            right = self.parse_term()
-
-            node = {
-                "type": "BinaryExpr",
-                "op": op,
-                "left": node,
-                "right": right
-            }
-
+            node = {"type": "BinaryExpr", "op": op, "left": node, "right": self.parse_term()}
         return node
 
     def parse_term(self):
-        node = self.parse_factor()
-
-        while (
-            self.peek()
-            and self.peek()["type"] == "OP"
-            and self.peek()["value"] in ["*", "/", "%"]
-        ):
+        node = self.parse_power()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] in ["*", "/", "%"]:
             op = self.consume()["value"]
-            right = self.parse_factor()
-
-            node = {
-                "type": "BinaryExpr",
-                "op": op,
-                "left": node,
-                "right": right
-            }
-
+            node = {"type": "BinaryExpr", "op": op, "left": node, "right": self.parse_power()}
         return node
 
-    def parse_factor(self):
-        tok = self.peek()
+    def parse_power(self):
+        node = self.parse_unary()
+        # ** is right-associative: a ** b ** c == a ** (b ** c)
+        if self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] == "**":
+            self.consume()
+            node = {"type": "BinaryExpr", "op": "**", "left": node, "right": self.parse_power()}
+        return node
 
+    def parse_unary(self):
+        tok = self.peek()
+        if tok and tok["type"] == "LOGIC" and tok["value"] == "not":
+            self.consume()
+            return {"type": "UnaryExpr", "op": "!", "right": self.parse_unary()}
+        if tok and tok["type"] == "OP" and tok["value"] in ["!", "+", "-", "~", "++", "--"]:
+            op = self.consume()["value"]
+            return {"type": "UnaryExpr", "op": op, "right": self.parse_unary()}
+        return self.parse_postfix()
+
+    def parse_postfix(self):
+        node = self.parse_primary()
+        while self.peek() and self.peek()["type"] == "OP" and self.peek()["value"] in ["++", "--"]:
+            op = self.consume()["value"]
+            node = {"type": "PostfixExpr", "op": op, "value": node}
+        return node
+
+    def parse_primary(self):
+        tok = self.peek()
         if not tok:
             return None
 
         if tok["type"] in ("NUMBER", "STRING"):
-            return {
-                "type": "Literal",
-                "value": self.consume()["value"]
-            }
+            return {"type": "Literal", "value": self.consume()["value"]}
 
         if tok["type"] == "LBRACK":
             self.consume("LBRACK")
             elements = []
-
-            while (
-                self.peek()
-                and self.peek()["type"] != "RBRACK"
-            ):
-                elements.append(self.parse())
-
-                if (
-                    self.peek()
-                    and self.peek()["type"] == "COMMA"
-                ):
-                    self.consume("COMMA")
-
-            self.consume("RBRACK")
-
-            return {
-                "type": "ArrayLiteral",
-                "elements": elements
-            }
+            if self.peek() and self.peek()["type"] != "RBRACK":
+                while True:
+                    elements.append(self.parse_or())
+                    if not self.consume("COMMA"):
+                        break
+            self.expect("RBRACK")
+            return {"type": "ArrayLiteral", "elements": elements}
 
         if tok["type"] == "ID":
             name = self.consume()["value"]
-
-            if (
-                self.peek()
-                and self.peek()["type"] == "LPAREN"
-            ):
-                self.consume("LPAREN")
+            if self.consume("LPAREN"):
                 args = []
-
-                while (
-                    self.peek()
-                    and self.peek()["type"] != "RPAREN"
-                ):
-                    args.append(self.parse())
-
-                    if (
-                        self.peek()
-                        and self.peek()["type"] == "COMMA"
-                    ):
-                        self.consume("COMMA")
-
-                self.consume("RPAREN")
-
-                return {
-                    "type": "CallExpr",
-                    "name": name,
-                    "args": args
-                }
-
-            if (
-                self.peek()
-                and self.peek()["type"] == "LBRACK"
-            ):
-                self.consume("LBRACK")
-                index_node = self.parse()
-                self.consume("RBRACK")
-
-                return {
-                    "type": "IndexExpr",
-                    "name": name,
-                    "index": index_node
-                }
-
-            return {
-                "type": "Variable",
-                "value": name
-            }
+                if self.peek() and self.peek()["type"] != "RPAREN":
+                    while True:
+                        args.append(self.parse_or())
+                        if not self.consume("COMMA"):
+                            break
+                self.expect("RPAREN")
+                return {"type": "CallExpr", "name": name, "args": args}
+            if self.consume("LBRACK"):
+                index_node = self.parse_or()
+                self.expect("RBRACK")
+                return {"type": "IndexExpr", "name": name, "index": index_node}
+            return {"type": "Variable", "value": name}
 
         if tok["type"] == "LPAREN":
             self.consume("LPAREN")
-            node = self.parse()
-            self.consume("RPAREN")
+            node = self.parse_or()
+            self.expect("RPAREN")
             return node
 
-        if (
-            tok["type"] == "LOGIC"
-            and tok["value"] == "not"
-        ):
-            self.consume()
-
-            return {
-                "type": "UnaryExpr",
-                "op": "!",
-                "right": self.parse_factor()
-            }
-
-        return None
+        raise Exception(f"構文エラー (行 {tok['line']}): 式として解釈できない '{tok['value']}' があります。")
 
 
 # ====================================================
@@ -424,10 +363,36 @@ def parse(tokens):
 
             func_name = line_tokens[1]["value"]
             params = []
-
-            for tok in line_tokens[2:]:
-                if tok["type"] == "ID":
-                    params.append(tok["value"])
+            rest = line_tokens[2:]
+            if rest:
+                if rest[0]["type"] != "LPAREN" or rest[-1]["type"] != "RPAREN":
+                    raise Exception(
+                        f"構文エラー (行 {first['line']}): "
+                        "func は func name(a, b) の形式で定義してください。"
+                    )
+                inner = rest[1:-1]
+                expect_id = True
+                for tok in inner:
+                    if expect_id:
+                        if tok["type"] != "ID":
+                            raise Exception(
+                                f"構文エラー (行 {tok['line']}): 関数パラメータ名が必要です。"
+                            )
+                        params.append(tok["value"])
+                    else:
+                        if tok["type"] != "COMMA":
+                            raise Exception(
+                                f"構文エラー (行 {tok['line']}): パラメータはカンマで区切ってください。"
+                            )
+                    expect_id = not expect_id
+                if inner and expect_id:
+                    raise Exception(
+                        f"構文エラー (行 {first['line']}): 関数パラメータの後ろが不正です。"
+                    )
+                if len(params) != len(set(params)):
+                    raise Exception(
+                        f"構文エラー (行 {first['line']}): パラメータ名が重複しています。"
+                    )
 
             node.update({
                 "type": "FunctionDef",
@@ -562,6 +527,23 @@ def parse(tokens):
         if first["type"] == "ID":
 
             if (
+                len(line_tokens) >= 2
+                and line_tokens[1]["type"] == "OP"
+                and line_tokens[1]["value"] in ["++", "--"]
+                and len(line_tokens) == 2
+            ):
+                parent["body"].append({
+                    "type": "ExpressionStatement",
+                    "value": {
+                        "type": "PostfixExpr",
+                        "op": line_tokens[1]["value"],
+                        "value": {"type": "Variable", "value": first["value"]}
+                    },
+                    "line": first["line"]
+                })
+                continue
+
+            if (
                 len(line_tokens) > 1
                 and line_tokens[1]["type"] == "LBRACK"
             ):
@@ -576,7 +558,7 @@ def parse(tokens):
 
                 if (
                     idx_end + 1 < len(line_tokens)
-                    and line_tokens[idx_end + 1]["value"] == "="
+                    and line_tokens[idx_end + 1]["value"] in ["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="]
                 ):
                     expr_parser = ExpressionParser(
                         line_tokens[2:idx_end]
@@ -591,9 +573,10 @@ def parse(tokens):
                     val_ast = expr_parser2.parse()
 
                     node.update({
-                        "type": "ArrayAssignStatement",
+                        "type": "ArrayAssignStatement" if line_tokens[idx_end + 1]["value"] == "=" else "ArrayCompoundAssignStatement",
                         "name": first["value"],
                         "index": idx_ast,
+                        "op": line_tokens[idx_end + 1]["value"],
                         "value": val_ast
                     })
 
@@ -603,15 +586,17 @@ def parse(tokens):
             if (
                 len(line_tokens) > 1
                 and line_tokens[1]["type"] == "OP"
-                and line_tokens[1]["value"] == "="
+                and line_tokens[1]["value"] in ["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="]
             ):
                 expr_parser = ExpressionParser(
                     line_tokens[2:]
                 )
 
+                op = line_tokens[1]["value"]
                 node.update({
-                    "type": "AssignmentExpression",
+                    "type": "AssignmentExpression" if op == "=" else "CompoundAssignment",
                     "variable": first["value"],
+                    "op": op,
                     "value": expr_parser.parse()
                 })
 
@@ -632,6 +617,203 @@ def parse(tokens):
 
 
 # ====================================================
+# Semantic validation
+# ====================================================
+
+BUILTIN_FUNCTIONS = {
+    "len": 1,
+    "range": (1, 3),
+    "input": (0, 1),
+} | {name: None for name in DISCORD_FUNCTIONS} if "DISCORD_FUNCTIONS" in globals() else {
+    "len": 1,
+    "range": (1, 3),
+    "input": (0, 1),
+}
+
+COMPOUND_OPERATORS = {"+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="}
+
+
+def _literal_kind(node):
+    if not node or node.get("type") != "Literal":
+        return None
+    raw = node.get("value", "")
+    if raw in ("true", "false"):
+        return "bool"
+    if raw.startswith('"'):
+        return "string"
+    if "." in raw:
+        return "float"
+    return "int"
+
+
+def validate_ast(tree):
+    """Validate grammar-level semantics shared by the C++ and interpreter paths."""
+    functions = {}
+    for node in tree.get("body", []):
+        if node.get("type") == "FunctionDef":
+            name = node["name"]
+            if name in functions:
+                raise Exception(f"意味エラー (行 {node.get('line', '?')}): 関数 '{name}' が重複定義されています。")
+            functions[name] = len(node.get("params", []))
+
+    known_calls = set(BUILTIN_FUNCTIONS) | set(functions) | set(DISCORD_FUNCTIONS)
+    declared = {}
+
+    def expr(node, env):
+        if node is None:
+            raise Exception("意味エラー: 式がありません。")
+        typ = node.get("type")
+        if typ == "Literal":
+            return _literal_kind(node)
+        if typ == "Variable":
+            name = node["value"]
+            if name not in env and name not in ("true", "false"):
+                raise Exception(f"意味エラー: 未定義の変数 '{name}' です。")
+            return env.get(name)
+        if typ == "ArrayLiteral":
+            kinds = [expr(x, env) for x in node.get("elements", [])]
+            kinds = [k for k in kinds if k is not None]
+            if not kinds:
+                return "array<int>"
+            first = kinds[0]
+            if any(k != first for k in kinds):
+                raise Exception("意味エラー: 配列の要素型を統一してください。")
+            return f"array<{first}>"
+        if typ == "IndexExpr":
+            base = expr({"type": "Variable", "value": node["name"]}, env)
+            idx = expr(node["index"], env)
+            if idx not in ("int", "float") and idx is not None:
+                raise Exception("意味エラー: 配列のインデックスは数値で指定してください。")
+            if not isinstance(base, str) or not base.startswith("array<"):
+                raise Exception(f"意味エラー: '{node['name']}' は配列ではありません。")
+            return base[6:-1]
+        if typ == "UnaryExpr":
+            op = node["op"]
+            value_type = expr(node["right"], env)
+            if op in ("+", "-") and value_type not in ("int", "float", None):
+                raise Exception(f"意味エラー: 単項演算子 '{op}' は数値に使用してください。")
+            if op == "~" and value_type not in ("int", None):
+                raise Exception("意味エラー: '~' は整数に使用してください。")
+            if op in ("++", "--"):
+                if node["right"].get("type") not in ("Variable", "IndexExpr"):
+                    raise Exception(f"意味エラー: '{op}' の対象は変数または配列要素である必要があります。")
+            return "bool" if op == "!" else value_type
+        if typ == "PostfixExpr":
+            value_type = expr(node["value"], env)
+            if node["value"].get("type") not in ("Variable", "IndexExpr"):
+                raise Exception(f"意味エラー: '{node['op']}' の対象は変数または配列要素である必要があります。")
+            if value_type not in ("int", "float"):
+                raise Exception(f"意味エラー: '{node['op']}' は数値に使用してください。")
+            return value_type
+        if typ == "BinaryExpr":
+            op = node["op"]
+            left = expr(node["left"], env)
+            right = expr(node["right"], env)
+            if op in ("&&", "||"):
+                return "bool"
+            if op in ("&", "|", "^", "<<", ">>"):
+                if (left not in ("int", None)) or (right not in ("int", None)):
+                    raise Exception(f"意味エラー: '{op}' は整数に使用してください。")
+                return "int"
+            if op == "**":
+                if left not in ("int", "float", None) or right not in ("int", "float", None):
+                    raise Exception("意味エラー: '**' は数値に使用してください。")
+                return "float"
+            if op in ("+", "-", "*", "/", "%"):
+                if left == "string" and right == "string" and op == "+":
+                    return "string"
+                if left not in ("int", "float", None) or right not in ("int", "float", None):
+                    raise Exception(f"意味エラー: '{op}' のオペランド型が不正です。")
+                return "float" if "float" in (left, right) or op == "/" else "int"
+            if op in ("==", "!=", "<", ">", "<=", ">="):
+                return "bool"
+            return None
+        if typ == "CallExpr":
+            name = node["name"]
+            args = node.get("args", [])
+            for arg in args:
+                expr(arg, env)
+            if name not in known_calls:
+                raise Exception(f"意味エラー: 未定義の関数 '{name}' です。")
+            arity = functions.get(name, BUILTIN_FUNCTIONS.get(name))
+            if isinstance(arity, int) and len(args) != arity:
+                raise Exception(f"意味エラー: {name}() は引数を {arity} 個指定してください。")
+            if isinstance(arity, tuple) and not (arity[0] <= len(args) <= arity[1]):
+                raise Exception(f"意味エラー: {name}() の引数は {arity[0]}〜{arity[1]} 個です。")
+            if name == "input":
+                return "string"
+            if name == "len":
+                return "int"
+            if name == "range":
+                return "array<int>"
+            return None
+        raise Exception(f"意味エラー: 未対応の式 '{typ}' です。")
+
+    def block(nodes, env, loop_depth=0, function_depth=0):
+        previous = None
+        for index, node in enumerate(nodes):
+            typ = node.get("type")
+            if typ == "IfStatement":
+                expr(node.get("condition"), env)
+                block(node.get("body", []), env, loop_depth, function_depth)
+                j = index + 1
+                while j < len(nodes) and nodes[j].get("type") in ("ElifStatement", "ElseStatement"):
+                    branch = nodes[j]
+                    if branch.get("type") == "ElifStatement":
+                        expr(branch.get("condition"), env)
+                    block(branch.get("body", []), env, loop_depth, function_depth)
+                    j += 1
+                previous = typ
+                continue
+            if typ == "ElifStatement":
+                if previous not in ("IfStatement", "ElifStatement"):
+                    raise Exception(f"意味エラー (行 {node.get('line', '?')}): elif は if/elif の直後に置いてください。")
+                previous = typ
+                continue
+            if typ == "ElseStatement":
+                if previous not in ("IfStatement", "ElifStatement"):
+                    raise Exception(f"意味エラー (行 {node.get('line', '?')}): else は if/elif の直後に置いてください。")
+                previous = typ
+                continue
+            if typ in ("BREAKStatement", "CONTINUEStatement") and loop_depth <= 0:
+                raise Exception(f"意味エラー (行 {node.get('line', '?')}): {typ.replace('Statement', '').lower()} はループ内でのみ使用できます。")
+            if typ == "FunctionDef":
+                block(node.get("body", []), {p: None for p in node.get("params", [])}, loop_depth=0, function_depth=function_depth + 1)
+                previous = typ
+                continue
+            if typ == "AssignmentExpression":
+                env[node["variable"]] = expr(node["value"], env)
+            elif typ == "CompoundAssignment":
+                name = node["variable"]
+                if name not in env:
+                    raise Exception(f"意味エラー (行 {node.get('line', '?')}): 未定義の変数 '{name}' に複合代入しています。")
+                expr(node["value"], env)
+            elif typ in ("ArrayAssignStatement", "ArrayCompoundAssignStatement"):
+                base = env.get(node["name"])
+                if not (isinstance(base, str) and base.startswith("array<")):
+                    raise Exception(f"意味エラー: '{node['name']}' は配列ではありません。")
+                expr(node["index"], env)
+                expr(node["value"], env)
+            elif typ == "PrintStatement" or typ == "ExpressionStatement":
+                expr(node.get("value"), env)
+            elif typ in ("WhileStatement", "ForStatement"):
+                if typ == "WhileStatement":
+                    expr(node["condition"], env)
+                else:
+                    expr(node["range"], env)
+                    env[node["variable"]] = "int"
+                block(node.get("body", []), env, loop_depth + 1, function_depth)
+            elif typ == "ReturnStatement":
+                if function_depth <= 0:
+                    raise Exception(f"意味エラー (行 {node.get('line', '?')}): return は関数内で使用してください。")
+                if node.get("value") is not None:
+                    expr(node["value"], env)
+            previous = typ
+
+    block(tree.get("body", []), declared)
+
+
+# ====================================================
 # C++ Generator
 # ====================================================
 
@@ -642,7 +824,13 @@ def generate_cpp(ast):
         "#include <vector>",
         "#include <algorithm>",
         "#include <type_traits>",
+        "#include <cmath>",
         "using namespace std;",
+        "",
+        "template<typename T> bool ps_truthy(const T& v) { return static_cast<bool>(v); }",
+        "bool ps_truthy(const string& v) { return !v.empty(); }",
+        "template<typename T> bool ps_truthy(const vector<T>& v) { return !v.empty(); }",
+        "template<typename A, typename B> auto ps_pow(A a, B b) { return std::pow(a, b); }",
         "",
         "template<typename T> int len(const vector<T>& v) { return static_cast<int>(v.size()); }",
         "int len(const string& s) { return static_cast<int>(s.length()); }",
@@ -662,20 +850,34 @@ def generate_cpp(ast):
         typ = node["type"]
 
         if typ == "Literal":
-            return node["value"]
+            raw = node["value"]
+            if raw == "true" or raw == "false":
+                return raw
+            return raw
         if typ == "Variable":
             return node["value"]
         if typ == "UnaryExpr":
-            return f"({node['op']}{to_cpp_expr(node['right'])})"
+            op = node["op"]
+            right = to_cpp_expr(node["right"])
+            if op == "!":
+                return f"(!ps_truthy({right}))"
+            return f"({op}{right})"
+        if typ == "PostfixExpr":
+            return f"({to_cpp_expr(node['value'])}{node['op']})"
         if typ == "BinaryExpr":
+            op = node["op"]
             left_str = to_cpp_expr(node["left"])
             right_str = to_cpp_expr(node["right"])
-            if node["op"] == "+" and (left_str.startswith('"') or right_str.startswith('"')):
+            if op == "+" and (left_str.startswith('"') or right_str.startswith('"')):
                 if left_str.startswith('"'):
                     left_str = f"string({left_str})"
                 if right_str.startswith('"'):
                     right_str = f"string({right_str})"
-            return f"({left_str} {node['op']} {right_str})"
+            if op == "**":
+                return f"ps_pow({left_str}, {right_str})"
+            if op in ("&&", "||"):
+                return f"(ps_truthy({left_str}) {op} ps_truthy({right_str}))"
+            return f"({left_str} {op} {right_str})"
         if typ == "ArrayLiteral":
             return "{" + ", ".join(to_cpp_expr(e) for e in node.get("elements", [])) + "}"
         if typ == "IndexExpr":
@@ -729,8 +931,20 @@ def generate_cpp(ast):
                     lines.append(f"{indent_str}{type_str} {var} = {cpp_val};")
                     declared_vars.add(var)
 
+            elif typ == "CompoundAssignment":
+                var = node["variable"]
+                op = node["op"]
+                cpp_val = to_cpp_expr(node["value"])
+                if var not in declared_vars:
+                    raise Exception(f"未定義の変数に複合代入しています: {var}")
+                lines.append(f"{indent_str}{var} {op} {cpp_val};")
+
             elif typ == "ArrayAssignStatement":
                 lines.append(f"{indent_str}{node['name']}[{to_cpp_expr(node['index'])}] = {to_cpp_expr(node['value'])};")
+
+            elif typ == "ArrayCompoundAssignStatement":
+                op = node.get("op", "+=")
+                lines.append(f"{indent_str}{node['name']}[{to_cpp_expr(node['index'])}] {op} {to_cpp_expr(node['value'])};")
 
             elif typ == "PrintStatement":
                 lines.append(f"{indent_str}cout << {to_cpp_expr(node['value'])} << endl;")
@@ -824,16 +1038,16 @@ class PsFunction:
         self.interpreter = interpreter
 
     def call(self, args):
+        params = self.node.get("params", [])
+        if len(args) != len(params):
+            raise Exception(
+                f"関数 {self.node['name']}() は引数を {len(params)} 個指定してください。"
+            )
+
         env = dict(self.interpreter.globals)
 
-        for i, name in enumerate(
-            self.node.get("params", [])
-        ):
-            env[name] = (
-                args[i]
-                if i < len(args)
-                else None
-            )
+        for i, name in enumerate(params):
+            env[name] = args[i]
 
         try:
             self.interpreter.execute_block(
@@ -966,8 +1180,25 @@ class PsDiscordInterpreter:
 
             if node["op"] == "!":
                 return not bool(value)
+            if node["op"] == "+":
+                return +value
+            if node["op"] == "-":
+                return -value
+            if node["op"] == "~":
+                return ~value
+            if node["op"] == "++":
+                return value + 1
+            if node["op"] == "--":
+                return value - 1
 
             return value
+
+        if typ == "PostfixExpr":
+            target = node["value"]
+            old_value = self.eval_expr(target, env)
+            new_value = old_value + 1 if node["op"] == "++" else old_value - 1
+            self.assign_target(target, new_value, env)
+            return old_value
 
         if typ == "BinaryExpr":
             op = node["op"]
@@ -1014,10 +1245,32 @@ class PsDiscordInterpreter:
                 return left * right
 
             if op == "/":
+                if isinstance(left, int) and isinstance(right, int):
+                    if right == 0:
+                        raise ZeroDivisionError("division by zero")
+                    return int(left / right)
                 return left / right
 
             if op == "%":
                 return left % right
+
+            if op == "**":
+                return left ** right
+
+            if op == "&":
+                return left & right
+
+            if op == "|":
+                return left | right
+
+            if op == "^":
+                return left ^ right
+
+            if op == "<<":
+                return left << right
+
+            if op == ">>":
+                return left >> right
 
             if op == "==":
                 return left == right
@@ -1076,7 +1329,11 @@ class PsDiscordInterpreter:
             if len(args) == 2:
                 return range(int(args[0]), int(args[1]))
             if len(args) == 3:
-                return range(int(args[0]), int(args[1]), int(args[2]))
+                step = int(args[2])
+                # C++ backend の range(…, step=0) と意味を一致させる。
+                if step == 0:
+                    return range(0)
+                return range(int(args[0]), int(args[1]), step)
             raise Exception(
                 "range() の引数は1〜3個です。"
             )
@@ -1649,6 +1906,20 @@ class PsDiscordInterpreter:
     # Execution
     # ====================================================
 
+    def assign_target(self, target, value, env):
+        if target.get("type") == "Variable":
+            env[target["value"]] = value
+            return
+        if target.get("type") == "IndexExpr":
+            name = target["name"]
+            base = env.get(name, self.globals.get(name))
+            if base is None:
+                raise Exception(f"未定義の配列: {name}")
+            index = self.eval_expr(target["index"], env)
+            base[index] = value
+            return
+        raise Exception("代入対象は変数または配列要素である必要があります。")
+
     def execute_node(self, node, env):
         typ = node["type"]
 
@@ -1667,37 +1938,56 @@ class PsDiscordInterpreter:
             return
 
         if typ == "AssignmentExpression":
-            value = self.eval_expr(
-                node["value"],
-                env
-            )
-
-            env[
-                node["variable"]
-            ] = value
-
+            value = self.eval_expr(node["value"], env)
+            env[node["variable"]] = value
             return
 
-        if typ == "ArrayAssignStatement":
+        if typ == "CompoundAssignment":
+            name = node["variable"]
+            if name not in env and name not in self.globals:
+                raise Exception(f"未定義の変数: {name}")
+            current = env.get(name, self.globals.get(name))
+            value = self.eval_expr(node["value"], env)
+            op = node["op"][:-1]
+            result = self.eval_expr({"type": "BinaryExpr", "op": op, "left": {"type": "Literal", "value": str(current)}, "right": {"type": "Literal", "value": str(value)}}, env) if False else None
+            if op == "+": result = current + value
+            elif op == "-": result = current - value
+            elif op == "*": result = current * value
+            elif op == "/":
+                result = int(current / value) if isinstance(current, int) and isinstance(value, int) else current / value
+            elif op == "%": result = current % value
+            elif op == "&": result = current & value
+            elif op == "|": result = current | value
+            elif op == "^": result = current ^ value
+            elif op == "<<": result = current << value
+            elif op == ">>": result = current >> value
+            else: raise Exception(f"未対応の複合代入演算子: {node['op']}")
+            env[name] = result
+            return
+
+        if typ in ("ArrayAssignStatement", "ArrayCompoundAssignStatement"):
             name = node["name"]
-
-            if name not in env:
-                raise Exception(
-                    f"未定義の配列: {name}"
-                )
-
-            index = self.eval_expr(
-                node["index"],
-                env
-            )
-
-            value = self.eval_expr(
-                node["value"],
-                env
-            )
-
-            env[name][index] = value
-
+            if name not in env and name not in self.globals:
+                raise Exception(f"未定義の配列: {name}")
+            base = env.get(name, self.globals.get(name))
+            index = self.eval_expr(node["index"], env)
+            value = self.eval_expr(node["value"], env)
+            if typ == "ArrayAssignStatement":
+                base[index] = value
+                return
+            current = base[index]
+            op = node["op"][:-1]
+            if op == "+": base[index] = current + value
+            elif op == "-": base[index] = current - value
+            elif op == "*": base[index] = current * value
+            elif op == "/": base[index] = int(current / value) if isinstance(current, int) and isinstance(value, int) else current / value
+            elif op == "%": base[index] = current % value
+            elif op == "&": base[index] = current & value
+            elif op == "|": base[index] = current | value
+            elif op == "^": base[index] = current ^ value
+            elif op == "<<": base[index] = current << value
+            elif op == ">>": base[index] = current >> value
+            else: raise Exception(f"未対応の配列複合代入演算子: {node['op']}")
             return
 
         if typ == "ExpressionStatement":
@@ -1953,6 +2243,9 @@ def run_code():
         tokens = tokenize(source)
 
         tree = parse(tokens)
+
+        # C++ backend と ps Runtime の両方で共通する意味検査を行う。
+        validate_ast(tree)
 
         if contains_discord_features(tree):
             if not PS_DISCORD_AVAILABLE:
