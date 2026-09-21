@@ -1035,6 +1035,12 @@
             <button class="language-option zh-option" id="lang-zh" onclick="setLanguage('zh')">
                 中文
             </button>
+            <button class="language-option" id="lang-es" onclick="setLanguage('es')">
+                Español
+            </button>
+            <button class="language-option" id="lang-fr" onclick="setLanguage('fr')">
+                Français
+            </button>
         </div>
 
 
@@ -1816,11 +1822,11 @@ hello()</pre>
 
                 }
 
-                button.innerText = currentLanguage === "en" ? "Copied" : currentLanguage === "zh" ? "已复制" : "コピーしました";
+                button.innerText = getRuntimeMessages().copied;
 
             } catch (err) {
 
-                button.innerText = currentLanguage === "en" ? "Copy failed" : currentLanguage === "zh" ? "复制失败" : "コピー失敗";
+                button.innerText = getRuntimeMessages().copyFailed;
 
             }
 
@@ -1853,128 +1859,44 @@ hello()</pre>
 
         async function runCode() {
 
+            const code = document.getElementById("code").value;
+            const outputBox = document.getElementById("output");
+            const messages = getRuntimeMessages();
 
-            const code =
-                document
-                    .getElementById("code")
-                    .value;
-
-
-            const outputBox =
-                document
-                    .getElementById("output");
-
-
-            // 空のコードはバックエンドへ送信せず、
-            // 現在選択されている表示言語で直接メッセージを表示する。
             if (!code.trim()) {
-                outputBox.innerText =
-                    currentLanguage === "en"
-                        ? "Error:\nCode is empty."
-                        : currentLanguage === "zh"
-                        ? "错误：\n代码为空。"
-                        : "エラー:\nコードが空です。";
+                outputBox.innerText = messages.empty;
                 return;
             }
 
-
-            outputBox.innerText =
-                currentLanguage === "en"
-                    ? "Translating ps to C++ and compiling..."
-                    : currentLanguage === "zh"
-                    ? "正在将 ps 转换为 C++ 并编译……"
-                    : "psコードをC++へ変換・コンパイル中...";
-
-
+            outputBox.innerText = messages.compiling;
 
             try {
+                const response = await fetch("/run", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ code: code })
+                });
 
-
-                const response =
-                    await fetch(
-                        "/run",
-                        {
-
-                            method: "POST",
-
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-
-                            body:
-                                JSON.stringify({
-
-                                    code: code
-
-                                })
-
-                        }
-                    );
-
-
-
-                const data =
-                    await response.json();
-
-
+                const data = await response.json();
 
                 if (data.success) {
-
-
                     outputBox.innerHTML =
-                        `<span style="color: #60a5fa;">${currentLanguage === "en" ? "[C++ Code]" : currentLanguage === "zh" ? "[C++代码]" : "[C++コード]"}
-
-${data.cpp}</span>
-
-<span style="color: #10b981;">${currentLanguage === "en" ? "[Execution Result]" : currentLanguage === "zh" ? "[执行结果]" : "[実行結果]"}
-
-${data.output}</span>`;
-
-
+                        `<span style="color: #60a5fa;">${messages.cpp}\n\n${data.cpp}</span>\n\n` +
+                        `<span style="color: #10b981;">${messages.result}\n\n${data.output}</span>`;
                 } else {
-
-
                     const backendError = data.error || "";
+                    const knownEmptyErrors = ["コードが空です。", "コードが空です"];
+                    const localizedError = knownEmptyErrors.includes(backendError)
+                        ? messages.empty.split("\n").slice(1).join("\n")
+                        : (backendError || messages.unknown);
 
-                    // バックエンド側が日本語で返す既知のエラーも、
-                    // English表示中は英語へ統一する。
-                    const localizedError = currentLanguage === "en"
-                        ? ({
-                            "コードが空です。": "Code is empty.",
-                            "コードが空です": "Code is empty."
-                        }[backendError] || backendError || "Unknown error")
-                        : currentLanguage === "zh"
-                        ? ({
-                            "コードが空です。": "代码为空。",
-                            "コードが空です": "代码为空。"
-                        }[backendError] || backendError || "未知错误")
-                        : (backendError || "不明なエラー");
-
-                    outputBox.innerText =
-                        (currentLanguage === "en" ? "Error:\n" : currentLanguage === "zh" ? "错误：\n" : "エラー:\n")
-                        + localizedError;
-
+                    outputBox.innerText = messages.error + localizedError;
                 }
-
-
             } catch (err) {
-
-
-                outputBox.innerText =
-                    currentLanguage === "en"
-                    ? "A network error occurred."
-                    : currentLanguage === "zh"
-                    ? "发生网络错误。"
-                    : "通信エラーが発生しました。";
-
+                outputBox.innerText = messages.network;
             }
-
-
         }
 
 
@@ -1982,134 +1904,311 @@ ${data.output}</span>`;
 
         let currentLanguage = "ja";
 
+        const languageNames = {
+            ja: "日本語",
+            en: "English",
+            zh: "中文",
+            es: "Español",
+            fr: "Français"
+        };
+
         const translations = {
-            "▶ 実行": "▶ Run",
-            "日本語": "日本語",
-            "psは、シンプルで書きやすい文法を目指して作られた": "ps is a programming language designed with",
-            "プログラミング言語です。": "simple, easy-to-write syntax.",
-            "psで書かれたコードはC++へ変換され、": "Code written in ps is translated into C++,",
-            "コンパイル・実行されます。": "then compiled and executed.",
-            "psは、プログラムを書く際の分かりやすさと": "ps focuses on clarity and simplicity when writing programs.",
-            "シンプルな記述を重視しています。": "",
-            "複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、": "It aims to reduce complex symbols while achieving processing speed comparable to C++,",
-            "コードの構造を直感的に分かりやすくすることを": "and to make code structure intuitive and easy to understand.",
-            "目指しています。": "",
-            "実行環境": "Playground",
-            "psについて": "About ps",
-            "文法・使い方": "Syntax & Usage",
-            "サンプルコード": "Sample Code",
-            "言語": "Language",
-            "psコードを入力して実行します。": "Write and run ps code.",
-            "【実行結果がここに表示されます】": "[Execution results will appear here]",
-            "コピーして、そのまま実行環境で試すことができます。": "Copy a sample and try it directly in the playground.",
-            "基本的な文字の出力です。": "A basic example of printing text.",
-            "変数と計算": "Variables & Calculation",
-            "変数を使って計算した結果を出力します。": "Use variables and print the result of a calculation.",
-            "条件分岐": "Conditional Branching",
-            "if / elseで条件によって処理を分けます。": "Use if / else to choose behavior based on a condition.",
-            "条件が成立している間、処理を繰り返します。": "Repeat processing while a condition is true.",
-            "指定した範囲の値を順番に取り出します。": "Iterate through values in a specified range.",
-            "関数": "Functions",
-            "処理を関数としてまとめて呼び出します。": "Group processing into a function and call it.",
-            "コピー": "Copy",
-            "試す": "Try",
-            "psとは": "What is ps?",
-            "特徴": "Features",
-            "シンプルな文法": "Simple syntax",
-            "インデントによるコード構造": "Indentation-based code structure",
-            "C++バックエンド": "C++ backend",
-            "Web上でコードを実行可能": "Run code on the web",
-            "変数・条件分岐・ループ・関数などに対応": "Supports variables, conditionals, loops, functions, and more",
-            "目的": "Goal",
-            "psの基本的な文法": "Basic ps syntax",
-            "出力": "Output",
-            "psを使用して文字や値を出力します。": "Use ps to print text or values.",
-            "変数": "Variables",
-            "変数に値を代入します。": "Assign a value to a variable.",
-            "条件によって処理を変更できます。": "Change behavior depending on a condition.",
-            "指定した範囲で処理を繰り返します。": "Repeat processing over a specified range.",
-            "rangeは複数の形式に対応しています。": "range supports multiple forms.",
-            "配列": "Arrays",
-            "複数の値をまとめて扱えます。": "Handle multiple values together.",
-            "処理を関数としてまとめることができます。": "Group processing into a function.",
-            "コメント": "Comments",
-            "コード内にメモを書くことができます。": "Write notes inside your code."
+            en: {
+                "▶ 実行": "▶ Run",
+                "言語": "Language",
+                "実行環境": "Playground",
+                "psについて": "About ps",
+                "文法・使い方": "Syntax & Usage",
+                "サンプルコード": "Sample Code",
+                "psコードを入力して実行します。": "Write and run ps code.",
+                "【実行結果がここに表示されます】": "[Execution results will appear here]",
+                "コピーして、そのまま実行環境で試すことができます。": "Copy a sample and try it directly in the playground.",
+                "基本的な文字の出力です。": "A basic example of printing text.",
+                "変数と計算": "Variables & Calculation",
+                "変数を使って計算した結果を出力します。": "Use variables to calculate and print a result.",
+                "条件分岐": "Conditional Branching",
+                "if / elseで条件によって処理を分けます。": "Use if / else to choose behavior based on a condition.",
+                "while": "while",
+                "条件が成立している間、処理を繰り返します。": "Repeat processing while a condition is true.",
+                "for / range": "for / range",
+                "指定した範囲の値を順番に取り出します。": "Iterate through values in a specified range.",
+                "関数": "Functions",
+                "処理を関数としてまとめて呼び出します。": "Group processing into a function and call it.",
+                "コピー": "Copy",
+                "試す": "Try",
+                "psとは": "What is ps?",
+                "特徴": "Features",
+                "シンプルな文法": "Simple syntax",
+                "インデントによるコード構造": "Indentation-based code structure",
+                "C++バックエンド": "C++ backend",
+                "Web上でコードを実行可能": "Run code on the web",
+                "変数・条件分岐・ループ・関数などに対応": "Supports variables, conditionals, loops, functions, and more",
+                "目的": "Goal",
+                "psの基本的な文法": "Basic ps syntax",
+                "出力": "Output",
+                "psを使用して文字や値を出力します。": "Use ps to print text or values.",
+                "変数": "Variables",
+                "変数に値を代入します。": "Assign a value to a variable.",
+                "条件によって処理を変更できます。": "Change behavior depending on a condition.",
+                "指定した範囲で処理を繰り返します。": "Repeat processing over a specified range.",
+                "range": "range",
+                "rangeは複数の形式に対応しています。": "range supports multiple forms.",
+                "配列": "Arrays",
+                "複数の値をまとめて扱えます。": "Work with multiple values together.",
+                "処理を関数としてまとめることができます。": "Group processing into a function.",
+                "コメント": "Comments",
+                "コード内にメモを書くことができます。": "Add notes to your code.",
+                "対応・未対応の記号": "Supported and unsupported symbols",
+                "現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。": "A reference of the main operators supported by ps and the main symbols that are not currently supported.",
+                "対応": "Supported",
+                "現在未対応": "Not currently supported",
+                "論理演算には": "Logical operations can also use",
+                "も使用できます。": ".",
+                "これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。": "This is a list of the main unsupported symbols. It will be updated as the language specification expands."
+            },
+            zh: {
+                "▶ 実行": "▶ 运行",
+                "言語": "语言",
+                "実行環境": "运行环境",
+                "psについて": "关于 ps",
+                "文法・使い方": "语法与用法",
+                "サンプルコード": "示例代码",
+                "psコードを入力して実行します。": "输入并运行 ps 代码。",
+                "【実行結果がここに表示されます】": "【执行结果将显示在这里】",
+                "コピーして、そのまま実行環境で試すことができます。": "复制后即可直接在运行环境中尝试。",
+                "基本的な文字の出力です。": "这是一个基本的文本输出示例。",
+                "変数と計算": "变量与计算",
+                "変数を使って計算した結果を出力します。": "使用变量进行计算并输出结果。",
+                "条件分岐": "条件分支",
+                "if / elseで条件によって処理を分けます。": "使用 if / else 根据条件选择处理方式。",
+                "while": "while",
+                "条件が成立している間、処理を繰り返します。": "条件成立时重复执行处理。",
+                "for / range": "for / range",
+                "指定した範囲の値を順番に取り出します。": "依次遍历指定范围内的值。",
+                "関数": "函数",
+                "処理を関数としてまとめて呼び出します。": "将处理封装为函数并调用。",
+                "コピー": "复制",
+                "試す": "尝试",
+                "psとは": "什么是 ps？",
+                "特徴": "特点",
+                "シンプルな文法": "简洁语法",
+                "インデントによるコード構造": "基于缩进的代码结构",
+                "C++バックエンド": "C++ 后端",
+                "Web上でコードを実行可能": "可在 Web 上运行代码",
+                "変数・条件分岐・ループ・関数などに対応": "支持变量、条件分支、循环、函数等",
+                "目的": "目标",
+                "psの基本的な文法": "ps 基本语法",
+                "出力": "输出",
+                "psを使用して文字や値を出力します。": "使用 ps 输出文本或数值。",
+                "変数": "变量",
+                "変数に値を代入します。": "为变量赋值。",
+                "条件によって処理を変更できます。": "可以根据条件改变处理方式。",
+                "指定した範囲で処理を繰り返します。": "在指定范围内重复执行处理。",
+                "range": "range",
+                "rangeは複数の形式に対応しています。": "range 支持多种形式。",
+                "配列": "数组",
+                "複数の値をまとめて扱えます。": "可以集中处理多个值。",
+                "処理を関数としてまとめることができます。": "可以将处理封装为函数。",
+                "コメント": "注释",
+                "コード内にメモを書くことができます。": "可以在代码中添加备注。",
+                "対応・未対応の記号": "支持与未支持的符号",
+                "現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。": "这里汇总了当前 ps 支持的主要运算符，以及目前尚未支持的主要符号。",
+                "対応": "支持",
+                "現在未対応": "目前未支持",
+                "論理演算には": "逻辑运算还可以使用",
+                "も使用できます。": "。",
+                "これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。": "这是主要未支持符号的列表。随着语言规范扩展，我们会继续更新。"
+            },
+            es: {
+                "▶ 実行": "▶ Ejecutar",
+                "言語": "Idioma",
+                "実行環境": "Entorno de ejecución",
+                "psについて": "Acerca de ps",
+                "文法・使い方": "Sintaxis y uso",
+                "サンプルコード": "Código de ejemplo",
+                "psコードを入力して実行します。": "Escribe y ejecuta código ps.",
+                "【実行結果がここに表示されます】": "[Los resultados de la ejecución aparecerán aquí]",
+                "コピーして、そのまま実行環境で試すことができます。": "Copia un ejemplo y pruébalo directamente en el entorno de ejecución.",
+                "基本的な文字の出力です。": "Un ejemplo básico de salida de texto.",
+                "変数と計算": "Variables y cálculos",
+                "変数を使って計算した結果を出力します。": "Usa variables para calcular y mostrar un resultado.",
+                "条件分岐": "Condicionales",
+                "if / elseで条件によって処理を分けます。": "Usa if / else para elegir qué hacer según una condición.",
+                "while": "while",
+                "条件が成立している間、処理を繰り返します。": "Repite el procesamiento mientras se cumpla una condición.",
+                "for / range": "for / range",
+                "指定した範囲の値を順番に取り出します。": "Recorre los valores de un rango especificado.",
+                "関数": "Funciones",
+                "処理を関数としてまとめて呼び出します。": "Agrupa el procesamiento en una función y llámala.",
+                "コピー": "Copiar",
+                "試す": "Probar",
+                "psとは": "¿Qué es ps?",
+                "特徴": "Características",
+                "シンプルな文法": "Sintaxis sencilla",
+                "インデントによるコード構造": "Estructura del código basada en indentación",
+                "C++バックエンド": "Backend de C++",
+                "Web上でコードを実行可能": "Ejecuta código en la web",
+                "変数・条件分岐・ループ・関数などに対応": "Admite variables, condicionales, bucles, funciones y más",
+                "目的": "Objetivo",
+                "psの基本的な文法": "Sintaxis básica de ps",
+                "出力": "Salida",
+                "psを使用して文字や値を出力します。": "Usa ps para mostrar texto o valores.",
+                "変数": "Variables",
+                "変数に値を代入します。": "Asigna un valor a una variable.",
+                "条件によって処理を変更できます。": "Puedes cambiar el comportamiento según una condición.",
+                "指定した範囲で処理を繰り返します。": "Repite el procesamiento dentro de un rango especificado.",
+                "range": "range",
+                "rangeは複数の形式に対応しています。": "range admite varias formas.",
+                "配列": "Arrays",
+                "複数の値をまとめて扱えます。": "Permite trabajar con varios valores juntos.",
+                "処理を関数としてまとめることができます。": "Puedes agrupar el procesamiento en una función.",
+                "コメント": "Comentarios",
+                "コード内にメモを書くことができます。": "Puedes añadir notas en el código.",
+                "対応・未対応の記号": "Símbolos compatibles y no compatibles",
+                "現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。": "Referencia de los principales operadores compatibles con ps y de los principales símbolos que aún no son compatibles.",
+                "対応": "Compatible",
+                "現在未対応": "No compatible actualmente",
+                "論理演算には": "Para las operaciones lógicas también puedes usar",
+                "も使用できます。": ".",
+                "これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。": "Esta es una lista de los principales símbolos no compatibles. Se actualizará a medida que se amplíe la especificación del lenguaje."
+            },
+            fr: {
+                "▶ 実行": "▶ Exécuter",
+                "言語": "Langue",
+                "実行環境": "Environnement d'exécution",
+                "psについて": "À propos de ps",
+                "文法・使い方": "Syntaxe et utilisation",
+                "サンプルコード": "Exemples de code",
+                "psコードを入力して実行します。": "Écrivez et exécutez du code ps.",
+                "【実行結果がここに表示されます】": "[Les résultats de l'exécution s'afficheront ici]",
+                "コピーして、そのまま実行環境で試すことができます。": "Copiez un exemple et testez-le directement dans l'environnement d'exécution.",
+                "基本的な文字の出力です。": "Un exemple simple d'affichage de texte.",
+                "変数と計算": "Variables et calculs",
+                "変数を使って計算した結果を出力します。": "Utilisez des variables pour effectuer un calcul et afficher le résultat.",
+                "条件分岐": "Conditions",
+                "if / elseで条件によって処理を分けます。": "Utilisez if / else pour choisir le traitement selon une condition.",
+                "while": "while",
+                "条件が成立している間、処理を繰り返します。": "Répétez le traitement tant qu'une condition est vraie.",
+                "for / range": "for / range",
+                "指定した範囲の値を順番に取り出します。": "Parcourez les valeurs d'une plage donnée.",
+                "関数": "Fonctions",
+                "処理を関数としてまとめて呼び出します。": "Regroupez le traitement dans une fonction et appelez-la.",
+                "コピー": "Copier",
+                "試す": "Essayer",
+                "psとは": "Qu'est-ce que ps ?",
+                "特徴": "Fonctionnalités",
+                "シンプルな文法": "Syntaxe simple",
+                "インデントによるコード構造": "Structure du code basée sur l'indentation",
+                "C++バックエンド": "Backend C++",
+                "Web上でコードを実行可能": "Exécutez du code sur le Web",
+                "変数・条件分岐・ループ・関数などに対応": "Prend en charge les variables, conditions, boucles, fonctions et plus encore",
+                "目的": "Objectif",
+                "psの基本的な文法": "Syntaxe de base de ps",
+                "出力": "Sortie",
+                "psを使用して文字や値を出力します。": "Utilisez ps pour afficher du texte ou des valeurs.",
+                "変数": "Variables",
+                "変数に値を代入します。": "Attribuez une valeur à une variable.",
+                "条件によって処理を変更できます。": "Modifiez le comportement selon une condition.",
+                "指定した範囲で処理を繰り返します。": "Répétez le traitement sur une plage donnée.",
+                "range": "range",
+                "rangeは複数の形式に対応しています。": "range prend en charge plusieurs formes.",
+                "配列": "Tableaux",
+                "複数の値をまとめて扱えます。": "Travaillez avec plusieurs valeurs à la fois.",
+                "処理を関数としてまとめることができます。": "Vous pouvez regrouper le traitement dans une fonction.",
+                "コメント": "Commentaires",
+                "コード内にメモを書くことができます。": "Ajoutez des notes dans votre code.",
+                "対応・未対応の記号": "Symboles pris en charge et non pris en charge",
+                "現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。": "Référence des principaux opérateurs pris en charge par ps et des principaux symboles qui ne le sont pas encore.",
+                "対応": "Pris en charge",
+                "現在未対応": "Pas encore pris en charge",
+                "論理演算には": "Pour les opérations logiques, vous pouvez également utiliser",
+                "も使用できます。": ".",
+                "これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。": "Voici la liste des principaux symboles non pris en charge. Elle sera mise à jour au fur et à mesure de l'évolution de la spécification du langage."
+            }
         };
 
-
-        const translationsZh = {
-            "▶ 実行": "▶ 运行",
-            "日本語": "日语",
-            "psは、シンプルで書きやすい文法を目指して作られた": "ps 是一种以简洁、易写的语法为目标设计的",
-            "プログラミング言語です。": "编程语言。",
-            "psで書かれたコードはC++へ変換され、": "使用 ps 编写的代码会转换为 C++，",
-            "コンパイル・実行されます。": "然后进行编译和执行。",
-            "psは、プログラムを書く際の分かりやすさと": "ps 注重编程时的清晰性和",
-            "シンプルな記述を重視しています。": "简洁的代码表达。",
-            "複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、": "它旨在尽量减少复杂符号，同时实现接近 C++ 的处理速度，",
-            "コードの構造を直感的に分かりやすくすることを": "并让代码结构更加直观、易于理解。",
-            "目指しています。": "",
-            "実行環境": "运行环境",
-            "psについて": "关于 ps",
-            "文法・使い方": "语法与用法",
-            "サンプルコード": "示例代码",
-            "言語": "语言",
-            "psコードを入力して実行します。": "输入并运行 ps 代码。",
-            "【実行結果がここに表示されます】": "【执行结果将显示在这里】",
-            "コピーして、そのまま実行環境で試すことができます。": "复制后即可直接在运行环境中尝试。",
-            "基本的な文字の出力です。": "这是一个基本的文本输出示例。",
-            "変数と計算": "变量与计算",
-            "変数を使って計算した結果を出力します。": "使用变量进行计算并输出结果。",
-            "条件分岐": "条件分支",
-            "if / elseで条件によって処理を分けます。": "使用 if / else 根据条件选择处理方式。",
-            "条件が成立している間、処理を繰り返します。": "条件成立时重复执行处理。",
-            "指定した範囲の値を順番に取り出します。": "依次取得指定范围内的值。",
-            "関数": "函数",
-            "処理を関数としてまとめて呼び出します。": "将处理封装为函数并调用。",
-            "コピー": "复制",
-            "試す": "尝试",
-            "psとは": "什么是 ps？",
-            "特徴": "特点",
-            "シンプルな文法": "简洁语法",
-            "インデントによるコード構造": "基于缩进的代码结构",
-            "C++バックエンド": "C++ 后端",
-            "Web上でコードを実行可能": "可在 Web 上运行代码",
-            "変数・条件分岐・ループ・関数などに対応": "支持变量、条件分支、循环、函数等",
-            "目的": "目标",
-            "psの基本的な文法": "ps 基本语法",
-            "出力": "输出",
-            "psを使用して文字や値を出力します。": "使用 ps 输出文本或数值。",
-            "変数": "变量",
-            "変数に値を代入します。": "为变量赋值。",
-            "条件によって処理を変更できます。": "可以根据条件改变处理方式。",
-            "指定した範囲で処理を繰り返します。": "在指定范围内重复执行处理。",
-            "rangeは複数の形式に対応しています。": "range 支持多种形式。",
-            "配列": "数组",
-            "複数の値をまとめて扱えます。": "可以集中处理多个值。",
-            "処理を関数としてまとめることができます。": "可以将处理封装为函数。",
-            "コメント": "注释",
-            "コード内にメモを書くことができます。": "可以在代码中添加备注。",
-            "対応・未対応の記号": "支持与未支持的符号",
-            "現在のpsで使用できる主な演算子と、現在未対応の主な記号をまとめています。": "这里汇总了当前 ps 支持的主要运算符，以及目前尚未支持的主要符号。",
-            "対応": "支持",
-            "現在未対応": "目前未支持",
-            "論理演算には": "逻辑运算还可以使用",
-            "も使用できます。": "。",
-            "これは「主な未対応記号」の一覧です。言語仕様の追加に合わせて更新していきます。": "这是主要未支持符号的列表。随着语言规范扩展，我们会继续更新。"
+        const aboutTranslations = {
+            en: {
+                intro: "ps is a programming language designed with simple, easy-to-write syntax.\n\nCode written in ps is translated into C++ and then compiled and executed.",
+                goal: "ps focuses on clarity and simple notation when writing programs.\n\nIt aims to reduce complex symbols while achieving processing speed comparable to C++, and to make code structure intuitive and easy to understand."
+            },
+            zh: {
+                intro: "ps 是一种以简洁、易写的语法为目标设计的编程语言。\n\n使用 ps 编写的代码会转换为 C++，然后进行编译和执行。",
+                goal: "ps 注重编程时的清晰性和简洁的代码表达。\n\n它旨在尽量减少复杂符号，同时实现接近 C++ 的处理速度，并让代码结构更加直观、易于理解。"
+            },
+            es: {
+                intro: "ps es un lenguaje de programación diseñado para ofrecer una sintaxis sencilla y fácil de escribir.\n\nEl código escrito en ps se traduce a C++ y después se compila y ejecuta.",
+                goal: "ps prioriza la claridad y una escritura sencilla al programar.\n\nSu objetivo es reducir los símbolos complejos, manteniendo una velocidad de procesamiento comparable a C++, y hacer que la estructura del código sea intuitiva y fácil de entender."
+            },
+            fr: {
+                intro: "ps est un langage de programmation conçu avec une syntaxe simple et facile à écrire.\n\nLe code écrit en ps est traduit en C++, puis compilé et exécuté.",
+                goal: "ps privilégie la clarté et une écriture simple lors de la programmation.\n\nSon objectif est de réduire les symboles complexes tout en offrant une vitesse de traitement comparable à celle du C++, et de rendre la structure du code intuitive et facile à comprendre."
+            }
         };
 
-        function toggleLanguageMenu() {
-            document.getElementById("language-options").classList.toggle("open");
-            document.getElementById("language-toggle").classList.toggle("open");
-        }
+        const runtimeMessages = {
+            ja: {
+                empty: "エラー:\nコードが空です。",
+                compiling: "psコードをC++へ変換・コンパイル中...",
+                cpp: "[C++コード]",
+                result: "[実行結果]",
+                error: "エラー:\n",
+                unknown: "不明なエラー",
+                network: "通信エラーが発生しました。",
+                copied: "コピーしました",
+                copyFailed: "コピー失敗"
+            },
+            en: {
+                empty: "Error:\nCode is empty.",
+                compiling: "Translating ps to C++ and compiling...",
+                cpp: "[C++ Code]",
+                result: "[Execution Result]",
+                error: "Error:\n",
+                unknown: "Unknown error",
+                network: "A network error occurred.",
+                copied: "Copied",
+                copyFailed: "Copy failed"
+            },
+            zh: {
+                empty: "错误：\n代码为空。",
+                compiling: "正在将 ps 转换为 C++ 并编译……",
+                cpp: "[C++ 代码]",
+                result: "[执行结果]",
+                error: "错误：\n",
+                unknown: "未知错误",
+                network: "发生网络错误。",
+                copied: "已复制",
+                copyFailed: "复制失败"
+            },
+            es: {
+                empty: "Error:\nEl código está vacío.",
+                compiling: "Traduciendo ps a C++ y compilando...",
+                cpp: "[Código C++]",
+                result: "[Resultado de la ejecución]",
+                error: "Error:\n",
+                unknown: "Error desconocido",
+                network: "Se produjo un error de red.",
+                copied: "Copiado",
+                copyFailed: "Error al copiar"
+            },
+            fr: {
+                empty: "Erreur :\nLe code est vide.",
+                compiling: "Traduction de ps en C++ et compilation en cours...",
+                cpp: "[Code C++]",
+                result: "[Résultat de l'exécution]",
+                error: "Erreur :\n",
+                unknown: "Erreur inconnue",
+                network: "Une erreur réseau s'est produite.",
+                copied: "Copié",
+                copyFailed: "Échec de la copie"
+            }
+        };
 
         const originalTextNodes = new WeakMap();
+        let translatableTextNodes = null;
 
-        function setLanguage(language) {
-            if (language === currentLanguage) {
-                closeMenu();
-                return;
-            }
+        function getTranslatableTextNodes() {
+            if (translatableTextNodes) return translatableTextNodes;
 
             const walker = document.createTreeWalker(
                 document.body,
@@ -2126,10 +2225,22 @@ ${data.output}</span>`;
                 }
             );
 
-            const nodes = [];
-            while (walker.nextNode()) nodes.push(walker.currentNode);
+            translatableTextNodes = [];
+            while (walker.nextNode()) translatableTextNodes.push(walker.currentNode);
+            return translatableTextNodes;
+        }
 
-            nodes.forEach(node => {
+        function toggleLanguageMenu() {
+            document.getElementById("language-options").classList.toggle("open");
+            document.getElementById("language-toggle").classList.toggle("open");
+        }
+
+        function setLanguage(language) {
+            if (!translations[language] && language !== "ja") return;
+
+            const dictionary = translations[language] || {};
+
+            getTranslatableTextNodes().forEach(node => {
                 if (!originalTextNodes.has(node)) {
                     originalTextNodes.set(node, node.nodeValue);
                 }
@@ -2138,56 +2249,57 @@ ${data.output}</span>`;
                 const trimmed = original.trim();
                 const prefix = original.match(/^\s*/)[0];
                 const suffix = original.match(/\s*$/)[0];
+                const translated = language === "ja" ? trimmed : dictionary[trimmed];
 
-                if (language === "ja") {
+                if (translated !== undefined) {
+                    node.nodeValue = prefix + translated + suffix;
+                } else if (language === "ja") {
                     node.nodeValue = original;
-                } else if (language === "en" && translations[trimmed] !== undefined) {
-                    node.nodeValue = prefix + translations[trimmed] + suffix;
-                } else if (language === "zh" && translationsZh[trimmed] !== undefined) {
-                    node.nodeValue = prefix + translationsZh[trimmed] + suffix;
                 }
             });
 
-            document.documentElement.lang = language;
-            document.title = language === "en"
+            const aboutIntro = document.getElementById("about-intro");
+            const aboutGoal = document.getElementById("about-goal");
+            if (aboutIntro) {
+                aboutIntro.textContent = language === "ja"
+                    ? "psは、シンプルで書きやすい文法を目指して作られた\nプログラミング言語です。\n\npsで書かれたコードはC++へ変換され、\nコンパイル・実行されます。"
+                    : aboutTranslations[language].intro;
+            }
+            if (aboutGoal) {
+                aboutGoal.textContent = language === "ja"
+                    ? "psは、プログラムを書く際の分かりやすさと\nシンプルな記述を重視しています。\n\n複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、\nコードの構造を直感的に分かりやすくすることを\n目指しています。"
+                    : aboutTranslations[language].goal;
+            }
+
+            ["ja", "en", "zh", "es", "fr"].forEach(code => {
+                document.getElementById("lang-" + code).classList.toggle("active", language === code);
+            });
+
+            currentLanguage = language;
+            document.documentElement.lang = language === "zh" ? "zh-Hans" : language;
+            document.title = language === "ja"
+                ? "ps - プログラミング言語"
+                : language === "en"
                 ? "ps - Programming Language"
                 : language === "zh"
                 ? "ps - 编程语言"
-                : "ps - プログラミング言語";
+                : language === "es"
+                ? "ps - Lenguaje de programación"
+                : "ps - Langage de programmation";
 
-            // ABOUTページの長文は複数のテキストノードに分かれるため、
-            // ここで文章単位で明示的に切り替える。
-            const aboutIntro = document.getElementById("about-intro");
-            const aboutGoal = document.getElementById("about-goal");
-
-            if (aboutIntro) {
-                aboutIntro.textContent = language === "en"
-                    ? "ps is a programming language designed with simple, easy-to-write syntax.\n\nCode written in ps is translated into C++ and then compiled and executed."
-                    : language === "zh"
-                    ? "ps 是一种以简洁、易写的语法为目标设计的编程语言。\n\n使用 ps 编写的代码会转换为 C++，然后进行编译和执行。"
-                    : "psは、シンプルで書きやすい文法を目指して作られた\nプログラミング言語です。\n\npsで書かれたコードはC++へ変換され、\nコンパイル・実行されます。";
-            }
-
-            if (aboutGoal) {
-                aboutGoal.textContent = language === "en"
-                    ? "ps focuses on clarity and simple notation when writing programs.\n\nIt aims to reduce complex symbols while achieving processing speed comparable to C++, and to make code structure intuitive and easy to understand."
-                    : language === "zh"
-                    ? "ps 注重编程时的清晰性和简洁的代码表达。\n\n它旨在尽量减少复杂符号，同时实现接近 C++ 的处理速度，并让代码结构更加直观、易于理解。"
-                    : "psは、プログラムを書く際の分かりやすさと\nシンプルな記述を重視しています。\n\n複雑な記号をできるだけ減らして尚且つC++並の処理速度を実現させ、\nコードの構造を直感的に分かりやすくすることを\n目指しています。";
-            }
-
-            document.getElementById("lang-ja").classList.toggle("active", language === "ja");
-            document.getElementById("lang-en").classList.toggle("active", language === "en");
-            document.getElementById("lang-zh").classList.toggle("active", language === "zh");
-
-            currentLanguage = language;
             localStorage.setItem("ps-language", language);
             closeMenu();
         }
 
+        function getRuntimeMessages() {
+            return runtimeMessages[currentLanguage] || runtimeMessages.ja;
+        }
+
         window.addEventListener("DOMContentLoaded", () => {
             const savedLanguage = localStorage.getItem("ps-language");
-            if (savedLanguage === "en" || savedLanguage === "zh") setLanguage(savedLanguage);
+            if (["ja", "en", "zh", "es", "fr"].includes(savedLanguage)) {
+                setLanguage(savedLanguage);
+            }
         });
 
     </script>
